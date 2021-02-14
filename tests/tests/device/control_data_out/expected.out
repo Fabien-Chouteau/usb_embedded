@@ -1,0 +1,16 @@
+UDC Initialize
+UDC Reset EPs
+UDC Start
+UDC Verbose off
+UDC Verbose on
+UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,CLASS,DEV) Req: 42 Val: 0 Index: 0 Len: 16
+UDC EP_Set_NAK [EP_OUT 0] TRUE
+UDC EP_Set_NAK [EP_OUT 0] FALSE
+UDC Poll -> DATA_READY [EP_OUT 0] BCNT: 16
+UDC EP_Read_Packet [EP_OUT 0] Len: 16
+0000_0000_0000_0000: 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A ****************
+USB Class Setup_Request Type: (HOST_TO_DEVICE,CLASS,DEV) Req: 42 Val: 0 Index: 0 Len: 16
+0000_0000_0000_0000: 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A ****************
+UDC EP_Set_NAK [EP_IN 0]
+UDC EP_Set_NAK [EP_OUT 0]
+UDC Poll -> NONE

@@ -1,0 +1,40 @@
+!e3.testsuite.result.TestResult
+diff: null
+env:
+  driver: ada-main
+  test_dir: /home/chouteau/src/github/perso/usb_embedded/tests/tests/device/control_data_out
+  test_name: device__control_data_out
+  working_dir: /tmp/tmp0xekbb_s/device__control_data_out
+expected: null
+failure_reasons: !!set {}
+info: {}
+log: "\e[0m\e[1mRunning\e[0m: \e[2mgprbuild (cwd=\e[0m/tmp/tmp0xekbb_s/device__control_data_out\e\
+  [2m)\n\e[0m\e[1mStatus code\e[0m: \e[2m4\n\e[0m\e[1mOutput\e[0m: \e[2m\nusing project\
+  \ file prj.gpr\nCompile\n   [Ada]          main.adb\n   [Ada]          usb-device.ads\n\
+  \   [Ada]          usb-device-midi.adb\nusb-device-midi.adb:73:04: (style) subprogram\
+  \ body has no previous spec\nusb-device-midi.adb:73:04: subprogram \"Setup_Read_Request\"\
+  \ is not overriding\nusb-device-midi.adb:74:33: not type conformant with declaration\
+  \ at usb-device-midi.ads:46\nusb-device-midi.adb:74:33: type of \"Req\" does not\
+  \ match\ngprbuild: *** compilation phase failed\n"
+msg: non-zero status code
+out: null
+processes:
+- cmd:
+  - gprbuild
+  cwd: /tmp/tmp0xekbb_s/device__control_data_out
+  output: |
+    using project file prj.gpr
+    Compile
+       [Ada]          main.adb
+       [Ada]          usb-device.ads
+       [Ada]          usb-device-midi.adb
+    usb-device-midi.adb:73:04: (style) subprogram body has no previous spec
+    usb-device-midi.adb:73:04: subprogram "Setup_Read_Request" is not overriding
+    usb-device-midi.adb:74:33: not type conformant with declaration at usb-device-midi.ads:46
+    usb-device-midi.adb:74:33: type of "Req" does not match
+    gprbuild: *** compilation phase failed
+  status: 4
+status: !e3.testsuite.result.TestStatus |-
+  2
+test_name: device__control_data_out
+time: null

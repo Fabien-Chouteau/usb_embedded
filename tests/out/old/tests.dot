@@ -1,0 +1,7 @@
+digraph G {
+rankdir="LR";
+"device__control_data_out.run_wrapper"
+"device__set_early_address.run_wrapper"
+"device__device_descriptor.run_wrapper"
+"device__set_address.run_wrapper"
+}

@@ -1,0 +1,1 @@
+{"magic": "e3.testsuite.report.index.ReportIndex:1", "entries": [{"test_name": "device__control_data_out", "status": "PASS", "msg": null}, {"test_name": "device__set_address", "status": "PASS", "msg": null}, {"test_name": "device__set_early_address", "status": "PASS", "msg": null}, {"test_name": "device__device_descriptor", "status": "PASS", "msg": null}]}

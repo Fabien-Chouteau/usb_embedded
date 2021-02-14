@@ -1,0 +1,12 @@
+UDC Initialize
+UDC Reset EPs
+UDC Start
+UDC Verbose off
+UDC Verbose on
+UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 5 Val: 42 Index: 0 Len: 0
+UDC EP_Set_NAK [EP_OUT 0] TRUE
+UDC Set_Address 42
+UDC EP_Write_Packet [EP_IN 0] ZLP
+UDC Poll -> TRANSFER_COMPLETE [EP_IN 0]
+UDC Set_Address 42
+UDC Poll -> NONE

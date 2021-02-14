@@ -1,0 +1,63 @@
+!e3.testsuite.result.TestResult
+diff: null
+env:
+  driver: ada-main
+  test_dir: /home/chouteau/src/github/perso/usb_embedded/tests/tests/device/device_descriptor
+  test_name: device__device_descriptor
+  working_dir: /tmp/tmprqikazc9/device__device_descriptor
+expected: null
+failure_reasons: !!set {}
+info: {}
+log: "\e[0m\e[1mRunning\e[0m: \e[2mgprbuild (cwd=\e[0m/tmp/tmprqikazc9/device__device_descriptor\e\
+  [2m)\n\e[0m\e[1mStatus code\e[0m: \e[2m0\n\e[0m\e[1mOutput\e[0m: \e[2m\nusing project\
+  \ file prj.gpr\nCompile\n   [Ada]          main.adb\n   [Ada]          usb_testing.ads\n\
+  \   [Ada]          usb_testing-udc_scenarios.adb\n   [Ada]          usb_testing-udc_stub.adb\n\
+  \   [Ada]          usb_testing-class_stub.adb\n   [Ada]          hex_dump.adb\n\
+  Bind\n   [gprbind]      main.bexch\n   [Ada]          main.ali\nLink\n   [link]\
+  \         main.adb\n\e[0m\e[1mRunning\e[0m: \e[2m./main (cwd=\e[0m/tmp/tmprqikazc9/device__device_descriptor\e\
+  [2m)\n\e[0m\e[1mStatus code\e[0m: \e[2m0\n\e[0m\e[1mOutput\e[0m: \e[2m\nUDC Initialize\n\
+  UDC Reset EPs\nUDC Start\nUDC Poll -> RESET\nUDC Reset EPs\nUDC EP_Setup [EP_IN\
+  \ 0] Type: CONTROL Max_Size: 64\nUDC EP_Setup [EP_OUT 0] Type: CONTROL Max_Size:\
+  \ 64\nUDC Set_Address 0\nUDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV)\
+  \ Req: 6 Val: 256 Index: 0 Len: 64\nUDC EP_Set_NAK [EP_OUT 0] TRUE\nUDC EP_Write_Packet\
+  \ [EP_IN 0]\n0000_0000_0000_0000: 12 01 00 02 00 00 00 40 66 66 42 42 00 01 01 02\
+  \ .......@ffBB....\n0000_0000_0000_0010: 03 01                                 \
+  \          ..              \nUDC Poll -> TRANSFER_COMPLETE [EP_IN 0]\nUDC EP_Set_NAK\
+  \ [EP_OUT 0] FALSE\nUDC Poll -> NONE\n"
+msg: null
+out: null
+processes:
+- cmd:
+  - gprbuild
+  cwd: /tmp/tmprqikazc9/device__device_descriptor
+  output: |
+    using project file prj.gpr
+    Compile
+       [Ada]          main.adb
+       [Ada]          usb_testing.ads
+       [Ada]          usb_testing-udc_scenarios.adb
+       [Ada]          usb_testing-udc_stub.adb
+       [Ada]          usb_testing-class_stub.adb
+       [Ada]          hex_dump.adb
+    Bind
+       [gprbind]      main.bexch
+       [Ada]          main.ali
+    Link
+       [link]         main.adb
+  status: 0
+- cmd:
+  - ./main
+  cwd: /tmp/tmprqikazc9/device__device_descriptor
+  output: "UDC Initialize\nUDC Reset EPs\nUDC Start\nUDC Poll -> RESET\nUDC Reset\
+    \ EPs\nUDC EP_Setup [EP_IN 0] Type: CONTROL Max_Size: 64\nUDC EP_Setup [EP_OUT\
+    \ 0] Type: CONTROL Max_Size: 64\nUDC Set_Address 0\nUDC Poll -> SETUP_REQUEST\
+    \ [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 256 Index: 0 Len: 64\n\
+    UDC EP_Set_NAK [EP_OUT 0] TRUE\nUDC EP_Write_Packet [EP_IN 0]\n0000_0000_0000_0000:\
+    \ 12 01 00 02 00 00 00 40 66 66 42 42 00 01 01 02 .......@ffBB....\n0000_0000_0000_0010:\
+    \ 03 01                                           ..              \nUDC Poll ->\
+    \ TRANSFER_COMPLETE [EP_IN 0]\nUDC EP_Set_NAK [EP_OUT 0] FALSE\nUDC Poll -> NONE\n"
+  status: 0
+status: !e3.testsuite.result.TestStatus |-
+  1
+test_name: device__device_descriptor
+time: null
