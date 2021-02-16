@@ -34,15 +34,29 @@
 with System;
 
 with HAL;            use HAL;
-with HAL.USB;        use HAL.USB;
-with HAL.USB.Device; use HAL.USB.Device;
 with USB;
+with USB.Device;     use USB.Device;
+with USB.HAL.Device; use USB.HAL.Device;
+with System.Storage_Elements; use System.Storage_Elements;
 
 package USB_Testing.Class_Stub is
 
-   type Device_Class_Stub
-   is new USB.USB_Device_Class
+   type Device_Class_Stub (Number : Positive)
+   is new USB.Device.USB_Device_Class
    with private;
+
+   overriding
+   procedure Initialize (This            : in out Device_Class_Stub;
+                         Dev             : in out USB_Device;
+                         Interface_Index :        Class_Index);
+
+   overriding
+   function Config_Descriptor_Length (This : in out Device_Class_Stub)
+                                      return Positive;
+
+   overriding
+   procedure Fill_Config_Descriptor (This : in out Device_Class_Stub;
+                                     Data :    out UInt8_Array);
 
    overriding
    function Configure (This  : in out Device_Class_Stub;
@@ -52,32 +66,34 @@ package USB_Testing.Class_Stub is
 
    overriding
    function Setup_Read_Request (This  : in out Device_Class_Stub;
-                                Req   : HAL.USB.Setup_Data;
+                                Req   : USB.Setup_Data;
                                 Buf   : out System.Address;
                                 Len   : out USB.Buffer_Len)
                                 return USB.Setup_Request_Answer;
 
    overriding
    function Setup_Write_Request (This  : in out Device_Class_Stub;
-                                 Req   : HAL.USB.Setup_Data;
+                                 Req   : USB.Setup_Data;
                                  Data  : UInt8_Array)
                                  return USB.Setup_Request_Answer;
 
    overriding
    procedure Transfer_Complete (This : in out Device_Class_Stub;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr);
+                                EP   : USB.EP_Addr);
 
    overriding
    procedure Data_Ready (This : in out Device_Class_Stub;
                          UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
+                         EP   : USB.EP_Id;
                          BCNT : UInt32);
 
 private
 
-   type Device_Class_Stub
-   is new USB.USB_Device_Class
-   with null record;
+   type Device_Class_Stub (Number : Positive)
+   is new USB.Device.USB_Device_Class with record
+      Interface_Index : Class_Index;
+      Ep : USB.EP_Id;
+   end record;
 
 end USB_Testing.Class_Stub;

@@ -29,8 +29,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL.USB; use HAL.USB;
-
 with Ada.Unchecked_Conversion;
 
 package body USB.Device.HID is
@@ -76,6 +74,48 @@ package body USB.Device.HID is
       16#01#,   16#c0#
      );
 
+   ----------------
+   -- Initialize --
+   ----------------
+
+   overriding
+   procedure Initialize (This            : in out Default_HID_Class;
+                         Dev             : in out USB_Device;
+                         Interface_Index :        Class_Index)
+   is
+   begin
+      if not Dev.Request_Endpoint (This.EP) then
+         raise Program_Error with "Cannot get EP for HID class";
+      end if;
+      This.Interface_Index := Interface_Index;
+   end Initialize;
+
+   ------------------------------
+   -- Config_Descriptor_Length --
+   ------------------------------
+
+   overriding
+   function Config_Descriptor_Length (This : in out Default_HID_Class)
+                                      return Positive
+   is
+      pragma Unreferenced (This);
+   begin
+      return 42;
+   end Config_Descriptor_Length;
+
+   ----------------------------
+   -- Fill_Config_Descriptor --
+   ----------------------------
+
+   overriding
+   procedure Fill_Config_Descriptor (This : in out Default_HID_Class;
+                                     Data :    out UInt8_Array)
+   is
+      pragma Unreferenced (This);
+   begin
+      Data := (others => 0);
+   end Fill_Config_Descriptor;
+
    ---------------
    -- Configure --
    ---------------
@@ -86,11 +126,10 @@ package body USB.Device.HID is
       Index : UInt16)
       return Setup_Request_Answer
    is
-      pragma Unreferenced (This);
    begin
       if Index = 1 then
 
-         UDC.EP_Setup (EP       => (1, EP_In),
+         UDC.EP_Setup (EP       => (This.EP, EP_In),
                        Typ      => Interrupt,
                        Max_Size => 4,
                        Callback => null);
@@ -168,7 +207,7 @@ package body USB.Device.HID is
 
    overriding
    function Setup_Write_Request (This  : in out Default_HID_Class;
-                                 Req   : HAL.USB.Setup_Data;
+                                 Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer
    is (Not_Supported);
@@ -180,14 +219,16 @@ package body USB.Device.HID is
    overriding
    procedure Transfer_Complete (This : in out Default_HID_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr)
+                                EP   : EP_Addr)
    is
    begin
-      if EP = (1, EP_In) then
+      pragma Assert (EP.Num = This.EP);
+
+      if EP = (This.EP, EP_In) then
          This.State := Idle;
 
          --  Setup for next TX
-         UDC.EP_Setup (EP       => (1, EP_In),
+         UDC.EP_Setup (EP       => (This.EP, EP_In),
                        Typ      => Interrupt,
                        Max_Size => 4,
                        Callback => null);
@@ -201,7 +242,7 @@ package body USB.Device.HID is
    overriding
    procedure Data_Ready (This : in out Default_HID_Class;
                          UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
+                         EP   : EP_Id;
                          BCNT : UInt32)
    is
    begin
@@ -231,7 +272,7 @@ package body USB.Device.HID is
    is
    begin
       if This.Ready then
-         UDC.EP_Write_Packet (1,
+         UDC.EP_Write_Packet (This.EP,
                               This.Report'Address,
                               UInt32 (This.Report'Length));
          This.State := Busy;

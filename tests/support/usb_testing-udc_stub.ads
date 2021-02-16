@@ -31,33 +31,16 @@
 
 --  USB Device Controller stub for testing
 
+with Ada.Containers.Doubly_Linked_Lists;
+
 with System;
 
-with HAL;            use HAL;
-with HAL.USB;        use HAL.USB;
-with HAL.USB.Device; use HAL.USB.Device;
-with USB;
+with HAL; use HAL;
+with USB; use USB;
+with USB.Device; use USB.Device;
+with USB.HAL.Device; use USB.HAL.Device;
 
 package USB_Testing.UDC_Stub is
-
-   Desc : aliased constant USB.Device_Descriptor :=
-     (
-      bLength            => USB.Device_Descriptor'Size / 8,
-      bDescriptorType    => 1, -- DT_DEVICE
-      bcdUSB             => 16#0200#,
-      bDeviceClass       => 0,
-      bDeviceSubClass    => 0,
-      bDeviceProtocol    => 0,
-      bMaxPacketSize0    => 64,
-      idVendor           => 16#6666#,
-      idProduct          => 16#4242#,
-      bcdDevice          => 16#0100#,
-      iManufacturer      => 1,
-      iProduct           => 2,
-      iSerialNumber      => 3,
-      bNumConfigurations => 1
-     );
-   --  Device descriptor than can be used for testing
 
    LANG_EN_US : constant USB.USB_String := (ASCII.HT, ASCII.EOT); -- 0x0409
 
@@ -95,9 +78,17 @@ package USB_Testing.UDC_Stub is
      );
    --  String descriptor than can be used for testing
 
-   type Scenario_Event is record
-      Verbose : Boolean := True;
-      Evt     : UDC_Event;
+   type Scenario_Event_Kind is (Set_Verbose, UDC_Event_E, Transfer_All);
+
+   type Scenario_Event (Kind : Scenario_Event_Kind := UDC_Event_E) is record
+      case Kind is
+         when Set_Verbose =>
+            Verbose : Boolean;
+         when UDC_Event_E =>
+            Evt     : UDC_Event;
+         when Transfer_All =>
+            EP : EP_Addr;
+      end case;
    end record;
 
    type Stub_Scenario is array (Natural range <>) of Scenario_Event;
@@ -106,7 +97,7 @@ package USB_Testing.UDC_Stub is
      (Scenario          : not null access constant Stub_Scenario;
       RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean)
-   is new HAL.USB.Device.USB_Device_Controller
+   is new USB_Device_Controller
    with private;
 
    function End_Of_Scenario (This : Controller) return Boolean;
@@ -168,6 +159,10 @@ package USB_Testing.UDC_Stub is
 
 private
 
+   package Event_Stack
+   is new Ada.Containers.Doubly_Linked_Lists (Scenario_Event);
+   use Event_Stack;
+
    type EP_Stub is record
       Setup           : Boolean := False;
       NAK             : Boolean := False;
@@ -181,19 +176,34 @@ private
 
    type EP_Stub_Array is array (EP_Id range <>) of EP_Stub_Couple;
 
+   type Controller_State is (Nominal,
+                             Device_To_Host_Transfer,
+                             Host_To_Device_Transfer);
+
    type Controller
      (Scenario          : not null access constant Stub_Scenario;
       RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean)
-   is new HAL.USB.Device.USB_Device_Controller
+   is new USB_Device_Controller
    with record
+      State : Controller_State := Nominal;
+      Stack : Event_Stack.List;
+
       Scenario_Index : Natural := Scenario.all'First;
       RX_Index       : Natural := RX_Data.all'First;
 
       Verbose        : Boolean := True;
 
       EPs            : EP_Stub_Array (0 .. 5); -- Arbitrary number of EP
+
+      Got_Ack        : Boolean := False;
    end record;
+
+   function Pop (This : in out Controller) return Scenario_Event
+     with Pre => not This.Stack.Is_Empty;
+
+   procedure Push (This : in out Controller;
+                   Evt  :        Scenario_Event);
 
    procedure Put_Line (This : Controller;
                        Str  : String);

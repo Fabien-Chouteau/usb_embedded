@@ -8,7 +8,7 @@ UDC EP_Setup [EP_OUT 0] Type: CONTROL Max_Size: 64
 UDC Set_Address 0
 UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 256 Index: 0 Len: 64
 UDC EP_Set_NAK [EP_OUT 0] TRUE
-UDC EP_Write_Packet [EP_IN 0]
+UDC EP_Write_Packet [EP_IN 0] 18 bytes
 0000_0000_0000_0000: 12 01 00 02 00 00 00 40 66 66 42 42 00 01 01 02 .......@ffBB....
 0000_0000_0000_0010: 03 01                                           ..              
 UDC Poll -> TRANSFER_COMPLETE [EP_IN 0]

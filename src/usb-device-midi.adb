@@ -32,9 +32,189 @@
 --  with Hex_Dump;
 with Ada.Text_IO;
 
-with HAL.USB; use HAL.USB;
-
 package body USB.Device.MIDI is
+
+   overriding
+   procedure Initialize (This            : in out Default_MIDI_Class;
+                         Dev             : in out USB_Device;
+                         Interface_Index :        Class_Index)
+   is
+   begin
+      if not Dev.Request_Endpoint (This.EP) then
+         raise Program_Error with "Cannot get EP for MIDI class";
+      end if;
+      This.Interface_Index := Interface_Index;
+   end Initialize;
+
+   ------------------------------
+   -- Config_Descriptor_Length --
+   ------------------------------
+
+   overriding
+   function Config_Descriptor_Length (This : in out Default_MIDI_Class)
+                                      return Positive
+   is
+      pragma Unreferenced (This);
+   begin
+      return 91;
+   end Config_Descriptor_Length;
+
+   ----------------------------
+   -- Fill_Config_Descriptor --
+   ----------------------------
+
+   overriding
+   procedure Fill_Config_Descriptor (This : in out Default_MIDI_Class;
+                                     Data :    out UInt8_Array)
+   is
+      F : constant Natural := Data'First;
+      USB_DESC_TYPE_INTERFACE     : constant := 4;
+      USB_DESC_TYPE_ENDPOINT      : constant := 5;
+
+   begin
+
+      pragma Style_Checks (Off);
+
+      --  B.3.1 Standard AC Interface Descriptor
+      --  The AudioControl interface has no dedicated endpoints associated with it. It uses the
+      --  default pipe (endpoint 0) for all communication purposes. Class-specific AudioControl
+      --  Requests are sent using the default pipe. There is no Status Interrupt endpoint provided.
+      --  descriptor follows inline: */
+      Data (F + 0 .. F + 90) :=
+        (9, --  sizeof(usbDescrInterface): length of descriptor in bytes
+         USB_DESC_TYPE_INTERFACE, --  descriptor type
+         This.Interface_Index, --  index of this interface
+         0, --  alternate setting for this interface
+         0, --  endpoints excl 0: number of endpoint descriptors to follow
+         1, --
+         1, --
+         0, --
+         0, --  string index for interface */
+
+         --  B.3.2 Class-specific AC Interface Descriptor
+         --  The Class-specific AC interface descriptor is always headed by a Header descriptor
+         --  that contains general information about the AudioControl interface. It contains all
+         --  the pointers needed to describe the Audio Interface Collection, associated with the
+         --  described audio function. Only the Header descriptor is present in this device
+         --  because it does not contain any audio functionality as such.
+         --  descriptor follows inline: */
+         9, --  sizeof(usbDescrCDC_HeaderFn): length of descriptor in bytes */
+         36, --  descriptor type */
+         1, --  header functional descriptor */
+         0, 0, --  bcdADC */
+         9, 0, --  wTotalLength */
+         1, --  */
+         1, --  */
+
+
+         --  B.4 MIDIStreaming Interface Descriptors
+
+         --  B.4.1 Standard MS Interface Descriptor
+         --  descriptor follows inline: */
+         9, --  length of descriptor in bytes */
+         USB_DESC_TYPE_INTERFACE, --  descriptor type */
+         1, --  index of this interface */
+         0, --  alternate setting for this interface */
+         2, --  endpoints excl 0: number of endpoint descriptors to follow */
+         1, --  AUDIO */
+         3, --  MS */
+         0, --  unused */
+         0, --  string index for interface */
+
+         --  B.4.2 Class-specific MS Interface Descriptor
+         --  descriptor follows inline: */
+         7, --  length of descriptor in bytes */
+         36, --  descriptor type */
+         1, --  header functional descriptor */
+         0, 1, --  bcdADC */
+         65, 0, --  wTotalLength */
+
+         --  B.4.3 MIDI IN Jack Descriptor
+         --  descriptor follows inline: */
+         6, --  bLength */
+         36, --  descriptor type */
+         2, --  MIDI_IN_JACK desc subtype */
+         1, --  EMBEDDED bJackType */
+         1, --  bJackID */
+         0, --  iJack */
+
+         --  descriptor follows inline: */
+         6, --  bLength */
+         36, --  descriptor type */
+         2, --  MIDI_IN_JACK desc subtype */
+         2, --  EXTERNAL bJackType */
+         2, --  bJackID */
+         0, --  iJack */
+
+         --  B.4.4 MIDI OUT Jack Descriptor
+         --  descriptor follows inline: */
+         9, --  length of descriptor in bytes */
+         36, --  descriptor type */
+         3, --  MIDI_OUT_JACK descriptor */
+         1, --  EMBEDDED bJackType */
+         3, --  bJackID */
+         1, --  No of input pins */
+         2, --  BaSourceID */
+         1, --  BaSourcePin */
+         0, --  iJack */
+
+         --  descriptor follows inline: */
+         9, --  bLength of descriptor in bytes */
+         36, --  bDescriptorType */
+         3, --  MIDI_OUT_JACK bDescriptorSubtype */
+         2, --  EXTERNAL bJackType */
+         4, --  bJackID */
+         1, --  bNrInputPins */
+         1, --  baSourceID (0) */
+         1, --  baSourcePin (0) */
+         0, --  iJack */
+
+         --  B.5 Bulk OUT Endpoint Descriptors
+
+         --  here 27 ---
+
+         --  B.5.1 Standard Bulk OUT Endpoint Descriptor
+         --  descriptor follows inline: */
+         9, --  bLenght */
+         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
+         1, --  bEndpointAddress OUT endpoint number 1 */
+         3, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint */
+         8, 0, --  wMaxPacketSize */
+         10, --  bInterval in ms */
+         0, --  bRefresh */
+         0, --  bSyncAddress */
+
+         --  B.5.2 Class-specific MS Bulk OUT Endpoint Descriptor
+         --  descriptor follows inline: */
+         5, --  bLength of descriptor in bytes */
+         37, --  bDescriptorType */
+         1, --  bDescriptorSubtype */
+         1, --  bNumEmbMIDIJack  */
+         1, --  baAssocJackID (0) */
+
+         --  B.6 Bulk IN Endpoint Descriptors
+
+         --  B.6.1 Standard Bulk IN Endpoint Descriptor
+         --  descriptor follows inline: */
+         9, --  bLenght */
+         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
+         16#81#, --  bEndpointAddress IN endpoint number 1 */
+         3, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint */
+         8, 0, --  wMaxPacketSize */
+         10, --  bInterval in ms */
+         0, --  bRefresh */
+         0, --  bSyncAddress */
+
+         --  B.6.2 Class-specific MS Bulk IN Endpoint Descriptor
+         --  descriptor follows inline: */
+         5, --  bLength of descriptor in bytes */
+         37, --  bDescriptorType */
+         1, --  bDescriptorSubtype */
+         1 --  bNumEmbMIDIJack (0) */
+        );
+
+
+   end Fill_Config_Descriptor;
 
    ---------------
    -- Configure --
@@ -49,11 +229,11 @@ package body USB.Device.MIDI is
    begin
       if Index = 1 then
 
-         UDC.EP_Setup (EP       => (1, EP_In),
+         UDC.EP_Setup (EP       => (This.EP, EP_In),
                        Typ      => Bulk,
                        Max_Size => This.Last_In'Length,
                        Callback => null);
-         UDC.EP_Setup (EP       => (1, EP_Out),
+         UDC.EP_Setup (EP       => (This.EP, EP_Out),
                        Typ      => Bulk,
                        Max_Size => This.Last_In'Length,
                        Callback => null);
@@ -129,7 +309,7 @@ package body USB.Device.MIDI is
 
    overriding
    function Setup_Write_Request (This  : in out Default_MIDI_Class;
-                                 Req   : HAL.USB.Setup_Data;
+                                 Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer
    is (Not_Supported);
@@ -141,15 +321,17 @@ package body USB.Device.MIDI is
    overriding
    procedure Transfer_Complete (This : in out Default_MIDI_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr)
+                                EP   : EP_Addr)
    is
       Index : Natural := This.Last_In'First;
    begin
 
+      pragma Assert (EP.Num = This.EP);
+
       UDC.EP_Set_NAK (EP, False);
 
       --  Setup the endpoint for the next packet
-      UDC.EP_Setup (EP       => (1, EP_Out),
+      UDC.EP_Setup (EP       => (This.EP, EP_Out),
                     Typ      => Bulk,
                     Max_Size => This.Last_In'Length,
                     Callback => null);
@@ -175,17 +357,19 @@ package body USB.Device.MIDI is
    overriding
    procedure Data_Ready (This : in out Default_MIDI_Class;
                          UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
+                         EP   : EP_Id;
                          BCNT : UInt32)
    is
    begin
+      pragma Assert (EP = This.EP);
+
       if BCNT > This.Last_In'Length then
          raise Program_Error;
       end if;
 
       This.RX_BCNT := BCNT;
 
-      UDC.EP_Read_Packet (Ep   => EP,
+      UDC.EP_Read_Packet (Ep   => This.EP,
                           Addr => This.Last_In'Address,
                           Len  => This.Last_In'Length);
    end Data_Ready;

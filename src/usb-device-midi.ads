@@ -29,12 +29,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL.USB;
-
 package USB.Device.MIDI is
 
    type Default_MIDI_Class
    is new USB_Device_Class with private;
+
+   overriding
+   procedure Initialize (This            : in out Default_MIDI_Class;
+                         Dev             : in out USB_Device;
+                         Interface_Index :        Class_Index);
+
+   overriding
+   function Config_Descriptor_Length (This : in out Default_MIDI_Class)
+                                      return Positive;
+
+   overriding
+   procedure Fill_Config_Descriptor (This : in out Default_MIDI_Class;
+                                     Data :    out UInt8_Array);
 
    overriding
    function Configure (This  : in out Default_MIDI_Class;
@@ -44,26 +55,26 @@ package USB.Device.MIDI is
 
    overriding
    function Setup_Read_Request (This  : in out Default_MIDI_Class;
-                                Req   : HAL.USB.Setup_Data;
+                                Req   : Setup_Data;
                                 Buf   : out System.Address;
                                 Len   : out Buffer_Len)
                                 return Setup_Request_Answer;
 
    overriding
    function Setup_Write_Request (This  : in out Default_MIDI_Class;
-                                 Req   : HAL.USB.Setup_Data;
+                                 Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer;
 
    overriding
    procedure Transfer_Complete (This : in out Default_MIDI_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr);
+                                EP   : EP_Addr);
 
    overriding
    procedure Data_Ready (This : in out Default_MIDI_Class;
                          UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
+                         EP   : EP_Id;
                          BCNT : UInt32);
 
    function Ready (This : in out Default_MIDI_Class) return Boolean;
@@ -82,6 +93,9 @@ private
    FIFO_Size : constant := 8;
 
    type Default_MIDI_Class is new USB_Device_Class with record
+      Interface_Index : Class_Index;
+      EP : USB.EP_Id;
+
       Last_In    : UInt8_Array (1 .. 64) := (others => 0);
       RX_BCNT    : UInt32 := 0;
 

@@ -29,13 +29,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL.USB;
 with Interfaces;
 
 package USB.Device.HID is
 
    type Default_HID_Class is new USB_Device_Class with private;
 
+   overriding
+   procedure Initialize (This            : in out Default_HID_Class;
+                         Dev             : in out USB_Device;
+                         Interface_Index :        Class_Index);
+   overriding
+   function Config_Descriptor_Length (This : in out Default_HID_Class)
+                                      return Positive;
+
+   overriding
+   procedure Fill_Config_Descriptor (This : in out Default_HID_Class;
+                                     Data :    out UInt8_Array);
    overriding
    function Configure (This  : in out Default_HID_Class;
                        UDC   : in out USB_Device_Controller'Class;
@@ -44,26 +54,26 @@ package USB.Device.HID is
 
    overriding
    function Setup_Read_Request (This  : in out Default_HID_Class;
-                                Req   : HAL.USB.Setup_Data;
+                                Req   : Setup_Data;
                                 Buf   : out System.Address;
                                 Len   : out Buffer_Len)
                                 return Setup_Request_Answer;
 
    overriding
    function Setup_Write_Request (This  : in out Default_HID_Class;
-                                 Req   : HAL.USB.Setup_Data;
+                                 Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer;
 
    overriding
    procedure Transfer_Complete (This : in out Default_HID_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr);
+                                EP   : EP_Addr);
 
    overriding
    procedure Data_Ready (This : in out Default_HID_Class;
                          UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
+                         EP   : EP_Id;
                          BCNT : UInt32);
 
    procedure Set_Move (This : in out Default_HID_Class;
@@ -79,9 +89,11 @@ private
    type Class_State is (Stop, Idle, Busy);
 
    type Default_HID_Class is new USB_Device_Class with record
-      Report     : UInt8_Array (1 .. 3) := (others => 0);
-      State      : Class_State := Stop;
-      Idle_State : UInt8 := 0;
+      Interface_Index : Class_Index;
+      EP              : USB.EP_Id;
+      Report          : UInt8_Array (1 .. 3) := (others => 0);
+      State           : Class_State := Stop;
+      Idle_State      : UInt8 := 0;
    end record;
 
 end USB.Device.HID;

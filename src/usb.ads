@@ -29,14 +29,77 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL.USB.Device; use HAL.USB.Device;
-with HAL;            use HAL;
 with System.Storage_Elements;
+with HAL; use HAL;
 
 private with System;
-private with HAL.USB;
 
 package USB is
+
+   subtype EP_Id is UInt4;
+
+   type EP_Dir is (EP_In, EP_Out);
+
+   type EP_Addr is record
+      Num : EP_Id;
+      Dir : EP_Dir;
+   end record;
+
+   type EP_Type is (Control, Isochronous, Bulk, Interrupt);
+   for EP_Type use (Control     => 0,
+                    Isochronous => 1,
+                    Bulk        => 2,
+                    Interrupt   => 3);
+
+   type Data_Phase_Transfer_Direction is (Host_To_Device,
+                                          Device_To_Host)
+     with Size => 1;
+
+   for Data_Phase_Transfer_Direction use (Host_To_Device => 0,
+                                          Device_To_Host => 1);
+
+   type Request_Type_Type is (Stand, Class, Vendor, Reserved)
+     with Size => 2;
+   for Request_Type_Type use (Stand    => 0,
+                              Class    => 1,
+                              Vendor   => 2,
+                              Reserved => 3);
+
+   type Request_Type_Recipient is (Dev, Iface, Endpoint, Other);
+   for Request_Type_Recipient use (Dev      => 0,
+                                   Iface    => 1,
+                                   Endpoint => 2,
+                                   Other    => 3);
+   type Request_Type is record
+      Recipient : Request_Type_Recipient;
+      Reserved  : UInt3;
+      Typ : Request_Type_Type;
+      Dir : Data_Phase_Transfer_Direction;
+   end record with Pack, Size => 8;
+
+   type Setup_Data is record
+      RType   : Request_Type;
+      Request : UInt8;
+      Value   : UInt16;
+      Index   : UInt16;
+      Length  : UInt16;
+   end record with Pack, Size => 8 * 8;
+
+   function Img (D : Setup_Data) return String
+   is ("Type: (" & D.RType.Dir'Img & "," & D.RType.Typ'Img & "," &
+         D.RType.Recipient'Img & ")" &
+         " Req:" & D.Request'Img &
+         " Val:" & D.Value'Img &
+         " Index:" & D.Index'Img &
+         " Len:" & D.Length'Img);
+
+   function Img (EP : EP_Addr) return String
+   is ("["  & EP.Dir'Img & EP.Num'Img & "]");
+
+   type String_ID is new UInt8;
+   Invalid_String_Id : constant String_ID := 0;
+
+   type Lang_ID is new UInt16;
 
    type Device_Descriptor is record
       bLength            : UInt8;
@@ -61,7 +124,13 @@ package USB is
       Str                : String (1 .. 2);
    end record;
 
-   type USB_String is array (UInt8 range <>) of Character;
+   subtype String_Range is UInt8 range 0 .. 253;
+   --  The maximum length of a string is limited by the the bLength field of the
+   --  String Descriptor. This field is one byte: 0 .. 255, but bLength encode
+   --  to total size of the descriptor include bLenght and bDescriptorType
+   --  fields (one byte each). So the remaining length for string is 255 - 2.
+
+   type USB_String is array (String_Range range <>) of Character;
 
    type String_Descriptor (bLength : UInt8) is record
       bDescriptorType    : UInt8 := 3;
@@ -79,105 +148,10 @@ package USB is
 
    subtype Buffer_Len is System.Storage_Elements.Storage_Offset;
 
-   -- Device Class Interface --
+   Verbose : constant Boolean := False;
 
-   type USB_Device_Class is interface;
-   type Any_USB_Device_Class is access all USB_Device_Class'Class;
-
-   function Configure (This  : in out USB_Device_Class;
-                       UDC   : in out USB_Device_Controller'Class;
-                       Index : UInt16)
-                       return Setup_Request_Answer
-   is abstract;
-
-   function Setup_Read_Request (This  : in out USB_Device_Class;
-                                Req   : HAL.USB.Setup_Data;
-                                Buf   : out System.Address;
-                                Len   : out Buffer_Len)
-                                return Setup_Request_Answer
-   is abstract;
-
-   function Setup_Write_Request (This  : in out USB_Device_Class;
-                                 Req   : HAL.USB.Setup_Data;
-                                 Data  : UInt8_Array)
-                                 return Setup_Request_Answer
-   is abstract;
-
-   procedure Transfer_Complete (This : in out USB_Device_Class;
-                                UDC  : in out USB_Device_Controller'Class;
-                                EP   : HAL.USB.EP_Addr)
-   is abstract;
-
-   procedure Data_Ready (This : in out USB_Device_Class;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : HAL.USB.EP_Id;
-                         BCNT : UInt32)
-   is abstract;
-
-   -- Device --
-
-   type USB_Device is tagged private;
-
-   function Initialized (This : USB_Device) return Boolean;
-
-   procedure Initalize (This       : in out USB_Device;
-                        Controller : not null Any_USB_Device_Controller;
-                        Class      : not null Any_USB_Device_Class;
-                        Dec        : not null access constant Device_Descriptor;
-                        Config     : not null access constant UInt8_Array;
-                        Strings    : not null access constant String_Array)
-     with Post => This.Initialized;
-
-   procedure Start (This : in out USB_Device)
-     with Pre => This.Initialized;
-
-   procedure Reset (This : in out USB_Device)
-     with Pre => This.Initialized;
-
-   procedure Poll (This : in out USB_Device)
-     with Pre => This.Initialized;
-
-   function Controller (This : USB_Device)
-                        return not null Any_USB_Device_Controller
-     with Pre => This.Initialized;
-
-private
-
-   type Control_State is (Idle,
-
-                          --  In means Device to Host
-                          Data_In,
-                          Last_Data_In,
-                          Status_In,
-
-                          --  Out means Host to Device
-                          Data_Out,
-                          Last_Data_Out,
-                          Status_Out);
-
-   type Device_State is (Idle, Addressed, Configured, Suspended);
-
-   type USB_Device is tagged record
-
-      --  For better performances this buffer has to be word aligned. So we put
-      --  it as the first field of this record.
-      RX_Ctrl_Buf : UInt8_Array (1 .. 256);
-
-      UDC     : Any_USB_Device_Controller := null;
-      Class   : Any_USB_Device_Class := null;
-      Desc    : access constant Device_Descriptor := null;
-      Config  : access constant UInt8_Array := null;
-      Strings : access constant String_Array := null;
-
-      Dev_Addr  : UInt7 := 0;
-      Dev_State : Device_State := Idle;
-
-      Ctrl_Req : HAL.USB.Setup_Data;
-      Ctrl_Buf : System.Address;
-      Ctrl_Len : Buffer_Len := 0;
-      Ctrl_State : Control_State := Idle;
-      Ctrl_Need_ZLP : Boolean := False;
-
-   end record;
-
+   Control_Buffer_Size : constant := 256;
+   Max_Strings : constant := 1;
+   Max_Total_String_Chars : constant := 256;
+   Max_Classes : constant := 4;
 end USB;

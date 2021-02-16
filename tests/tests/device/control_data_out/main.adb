@@ -3,26 +3,29 @@ with USB_Testing;               use USB_Testing;
 with USB_Testing.UDC_Stub;      use USB_Testing.UDC_Stub;
 with USB_Testing.UDC_Scenarios;
 
-with HAL;            use HAL;
-with HAL.USB;        use HAL.USB;
-with HAL.USB.Device; use HAL.USB.Device;
+with HAL; use HAL;
 
-with USB;
+with USB;            use USB;
+with USB.Device;     use USB.Device;
+with USB.HAL.Device; use USB.HAL.Device;
 
 procedure Main is
 
    Scenario : aliased constant UDC_Stub.Stub_Scenario :=
      UDC_Scenarios.Enumeration (Verbose => False) &
-     Stub_Scenario'(1 => (True, (Kind   => Setup_Request,
+     Stub_Scenario'(1 => (Kind => Set_Verbose, Verbose => True),
+                    2 => (Kind => UDC_Event_E,
+                          Evt  => (Kind   => Setup_Request,
 
-                                 --  Use an invalid request to trigger a stall
-                                 --  after the data transfer.
-                                 Req     => ((Dev, 0, Class, Host_To_Device),
-                                            42, 0, 0, 16),
-                                 Req_EP  => 0)),
-                    2 => (True, (Kind    => Data_Ready,
-                                 RX_EP   => 0,
-                                 RX_BCNT => 16)
+                                   --  Use an invalid request to trigger a stall
+                                   --  after the data transfer.
+                                   Req     => ((Dev, 0, Class, Host_To_Device),
+                                               42, 0, 0, 16),
+                                   Req_EP  => 0)),
+                    3 => (Kind => UDC_Event_E,
+                          Evt  =>  (Kind    => Data_Ready,
+                                    RX_EP   => 0,
+                                    RX_BCNT => 16)
                          )
                    );
 

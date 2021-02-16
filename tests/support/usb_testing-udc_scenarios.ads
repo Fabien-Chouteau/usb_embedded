@@ -29,11 +29,13 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with USB_Testing.UDC_Stub;
+with USB_Testing.UDC_Stub; use USB_Testing.UDC_Stub;
 
-with HAL;                  use HAL;
-with HAL.USB;              use HAL.USB;
-with HAL.USB.Device;       use HAL.USB.Device;
+with HAL; use HAL;
+with USB; use USB;
+with USB.Device;     use USB.Device;
+with USB.HAL.Device; use USB.HAL.Device;
+
 
 package USB_Testing.UDC_Scenarios is
 
@@ -42,27 +44,55 @@ package USB_Testing.UDC_Scenarios is
                              Early_Address : Boolean := False);
    --  Create a Basic UDC test setup (stub UDC and stub class) and run the test
 
+   procedure Two_Classes_UDC_Test (Scenario : aliased UDC_Stub.Stub_Scenario;
+                                   RX_Data  : aliased UInt8_Array);
+   --  Create an UDC test setup with two classses and run the test
+
    -- Commonly used pieces of UDC scenario --
 
    function Enumeration (Verbose : Boolean)
                          return UDC_Stub.Stub_Scenario
-   is (((Verbose,   (Kind => Reset))
-        , (Verbose, (Kind   => Setup_Request,
-                     Req    => ((Dev, 0, Stand, Device_To_Host),
-                                6, 16#100#, 0, 64),
-                     Req_EP => 0))
-        , (Verbose, (Kind => Transfer_Complete, T_EP => (0, EP_In)))
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind => Reset))
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       --  Get Device descriptor
+                       Req    => ((Dev, 0, Stand, Device_To_Host),
+                                  6, 16#0100#, 0, 64),
+                       Req_EP => 0))
        )
       );
 
    function Set_Address (Verbose : Boolean;
                          Addr    : UInt16 := 42)
                          return UDC_Stub.Stub_Scenario
-   is (((Verbose, (Kind   => Setup_Request,
-                   Req    => ((Dev, 0, Stand, Host_To_Device),
-                              5, Addr, 0, 0),
-                   Req_EP => 0))
-        , (Verbose, (Kind => Transfer_Complete, T_EP => (0, EP_In)))
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       Req    => ((Dev, 0, Stand, Host_To_Device),
+                                  5, Addr, 0, 0),
+                       Req_EP => 0))
+        , (Kind    => Transfer_All,
+           EP      => (0, EP_In))
+       )
+      );
+
+   function Get_Config (Verbose : Boolean)
+                        return UDC_Stub.Stub_Scenario
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       Req    => ((Dev, 0, Stand, Device_To_Host),
+                                  6, 16#0200#, 0, 255),
+                       Req_EP => 0))
+
+        , (Kind    => Transfer_All,
+           EP      => (0, EP_In))
        )
       );
 

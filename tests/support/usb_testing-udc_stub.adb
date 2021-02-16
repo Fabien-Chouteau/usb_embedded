@@ -140,7 +140,7 @@ package body USB_Testing.UDC_Stub is
 
    function End_Of_Scenario (This : Controller)
                              return Boolean
-   is (This.Scenario_Index not in This.Scenario'Range);
+   is (This.Stack.Is_Empty);
 
    ----------------
    -- Initialize --
@@ -150,6 +150,11 @@ package body USB_Testing.UDC_Stub is
    procedure Initialize (This : in out Controller)
    is
    begin
+      for Elt of This.Scenario.all loop
+         This.Stack.Prepend (Elt);
+      end loop;
+
+
       This.Put_Line ("UDC Initialize");
 
       Reset (This);
@@ -174,22 +179,37 @@ package body USB_Testing.UDC_Stub is
    function Poll (This : in out Controller)
                   return UDC_Event
    is
-      Ret : constant UDC_Event :=
-        (if This.Scenario_Index in This.Scenario'Range then
-            This.Scenario (This.Scenario_Index).Evt
-         else
-            No_Event);
+      Ret : UDC_Event;
    begin
-      if This.Scenario_Index in This.Scenario'Range then
 
-         if This.Scenario (This.Scenario_Index).Verbose /= This.Verbose then
-            This.Verbose := not This.Verbose;
-            Ada.Text_IO.Put_Line ("UDC Verbose "  & (if This.Verbose then
-                                     "on" else "off"));
+      loop
+         if This.Stack.Is_Empty then
+            Ret := No_Event;
+            exit;
          end if;
 
-         This.Scenario_Index := This.Scenario_Index + 1;
-      end if;
+
+         declare
+            Step : Scenario_Event renames This.Pop;
+         begin
+
+            case Step.Kind is
+            when Set_Verbose =>
+               if Step.Verbose /= This.Verbose then
+                  This.Verbose := not This.Verbose;
+                  Ada.Text_IO.Put_Line ("UDC Verbose "  & (if This.Verbose then
+                                           "on" else "off"));
+               end if;
+
+            when Transfer_All =>
+               null;
+
+            when UDC_Event_E =>
+               Ret := Step.Evt;
+               exit;
+            end case;
+         end;
+      end loop;
 
       This.Put_Line ("UDC Poll -> " & Img (Ret));
 
@@ -245,7 +265,7 @@ package body USB_Testing.UDC_Stub is
       Data : UInt8_Array (1 .. Natural (Len)) with Address => Addr;
    begin
       This.Put_Line ("UDC EP_Read_Packet " & Img (EP_Addr'(Ep, EP_Out)) &
-                       " Len:" & Len'Img);
+                     Len'Img & " bytes");
 
       if Ep not in This.EPs'Range then
          raise Program_Error with "UDC Error: invalid EP number in EP_Read_Packet";
@@ -292,7 +312,7 @@ package body USB_Testing.UDC_Stub is
 
    begin
       This.Put_Line ("UDC EP_Write_Packet " & Img (EP_Addr'(Ep, EP_In)) &
-                    (if Len = 0 then " ZLP" else ""));
+                    (if Len = 0 then " ZLP" else Len'Img & " bytes"));
 
       if Ep not in This.EPs'Range then
          raise Program_Error with "UDC Error: invalid EP number in EP_Write";
@@ -311,6 +331,9 @@ package body USB_Testing.UDC_Stub is
       end if;
 
       This.Hex_Dump (Data);
+
+      This.Push ((Kind => UDC_Event_E,
+                  Evt  => (Kind => Transfer_Complete, T_EP => (Ep, EP_In))));
 
    end EP_Write_Packet;
 
@@ -392,6 +415,29 @@ package body USB_Testing.UDC_Stub is
    begin
       This.Put_Line ("UDC Set_Address" & Addr'Img);
    end Set_Address;
+
+   ---------
+   -- Pop --
+   ---------
+
+   function Pop (This : in out Controller) return Scenario_Event is
+      Ret : Scenario_Event := This.Stack.Last_Element;
+   begin
+      This.Stack.Delete_Last;
+      return Ret;
+   end Pop;
+
+   ----------
+   -- Push --
+   ----------
+
+   procedure Push (This : in out Controller;
+                   Evt  :        Scenario_Event)
+   is
+   begin
+      This.Stack.Append (Evt);
+   end Push;
+
 
    --------------
    -- Put_Line --

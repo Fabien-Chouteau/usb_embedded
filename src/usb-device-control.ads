@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                        Copyright (C) 2021, AdaCore                       --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,66 +29,43 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-package HAL.USB is
+private package USB.Device.Control is
 
-   subtype EP_Id is UInt4;
+   procedure Setup (This : in out USB_Device;
+                    EP   : EP_Id);
+   --  Handle setup request
 
-   type EP_Dir is (EP_In, EP_Out);
+   procedure Control_In (This : in out USB_Device);
 
-   type EP_Addr is record
-      Num : EP_Id;
-      Dir : EP_Dir;
-   end record;
+   procedure Control_Out (This : in out USB_Device;
+                          BCNT : UInt11);
+   --  FIXME: Is BCNT useful?
 
-   type EP_Type is (Control, Isochronous, Bulk, Interrupt);
-   for EP_Type use (Control     => 0,
-                    Isochronous => 1,
-                    Bulk        => 2,
-                    Interrupt   => 3);
+private
 
-   type Data_Phase_Transfer_Direction is (Host_To_Device,
-                                          Device_To_Host)
-     with Size => 1;
+   procedure Setup_Read (This : in out USB_Device);
+   --  Handle setup read request
 
-   for Data_Phase_Transfer_Direction use (Host_To_Device => 0,
-                                          Device_To_Host => 1);
+   procedure Setup_Write (This : in out USB_Device);
+   --  Handle setup write request
 
-   type Request_Type_Type is (Stand, Class, Vendor, Reserved)
-     with Size => 2;
-   for Request_Type_Type use (Stand    => 0,
-                              Class    => 1,
-                              Vendor   => 2,
-                              Reserved => 3);
+   function Dispatch_Request (This : in out USB_Device)
+                              return Setup_Request_Answer;
 
-   type Request_Type_Recipient is (Dev, Iface, Endpoint, Other);
-   for Request_Type_Recipient use (Dev      => 0,
-                                   Iface    => 1,
-                                   Endpoint => 2,
-                                   Other    => 3);
-   type Request_Type is record
-      Recipient : Request_Type_Recipient;
-      Reserved  : UInt3;
-      Typ : Request_Type_Type;
-      Dir : Data_Phase_Transfer_Direction;
-   end record with Pack, Size => 8;
+   function Dispatch_Request_To_Class (This : in out USB_Device)
+                                       return Setup_Request_Answer;
 
-   type Setup_Data is record
-      RType   : Request_Type;
-      Request : UInt8;
-      Value   : UInt16;
-      Index   : UInt16;
-      Length  : UInt16;
-   end record with Pack, Size => 8 * 8;
+   procedure Handle_Read_Request (This : in out USB_Device);
+   --  Handle setup read request
 
-   function Img (D : Setup_Data) return String
-   is ("Type: (" & D.RType.Dir'Img & "," & D.RType.Typ'Img & "," &
-         D.RType.Recipient'Img & ")" &
-         " Req:" & D.Request'Img &
-         " Val:" & D.Value'Img &
-         " Index:" & D.Index'Img &
-         " Len:" & D.Length'Img);
+   procedure Handle_Write_Request (This : in out USB_Device);
+   --  Handle setup write request
 
-   function Img (EP : EP_Addr) return String
-   is ("["  & EP.Dir'Img & EP.Num'Img & "]");
+   function Device_Request (This : in out USB_Device)
+                            return Setup_Request_Answer;
 
-end HAL.USB;
+   procedure Send_Chunk (This : in out USB_Device);
+
+   procedure Receive_Chunk (This : in out USB_Device);
+
+end USB.Device.Control;

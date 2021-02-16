@@ -30,6 +30,8 @@
 ------------------------------------------------------------------------------
 
 with USB;
+with USB.Device;
+with USB.Device.MIDI;
 
 with USB_Testing.Class_Stub;
 
@@ -45,19 +47,22 @@ package body USB_Testing.UDC_Scenarios is
    is
       Configuration : aliased constant UInt8_Array := (0 .. 1 => 0);
 
-      Class : aliased Class_Stub.Device_Class_Stub;
+      Class : aliased Class_Stub.Device_Class_Stub (1);
+      MIDI  : aliased USB.Device.MIDI.Default_MIDI_Class;
 
       UDC : aliased UDC_Stub.Controller (Scenario'Unchecked_Access,
                                          RX_Data'Unchecked_Access,
                                          Has_Early_Address => Early_Address);
-      Ctrl : USB.USB_Device;
+      Ctrl : USB.Device.USB_Device;
    begin
 
-      Ctrl.Initalize (Controller => UDC'Unchecked_Access,
-                      Class      => Class'Unchecked_Access,
-                      Dec        => USB_Testing.UDC_Stub.Desc'Unchecked_Access,
-                      Config     => Configuration'Unchecked_Access,
-                      Strings    => USB_Testing.UDC_Stub.Strings'Unchecked_Access);
+      Ctrl.Register_Class (Class'Unchecked_Access);
+      Ctrl.Register_Class (MIDI'Unchecked_Access);
+
+      Ctrl.Initalize
+        (Controller      => UDC'Unchecked_Access,
+         Strings         => USB_Testing.UDC_Stub.Strings'Unchecked_Access,
+         Max_Packet_Size => 64);
 
       Ctrl.Start;
 
@@ -68,5 +73,41 @@ package body USB_Testing.UDC_Scenarios is
          pragma Warnings (On, "possible infinite loop");
       end loop;
    end Basic_UDC_Test;
+
+   --------------------------
+   -- Two_Classes_UDC_Test --
+   --------------------------
+
+   procedure Two_Classes_UDC_Test (Scenario : aliased UDC_Stub.Stub_Scenario;
+                                   RX_Data  : aliased UInt8_Array)
+   is
+      Configuration : aliased constant UInt8_Array := (0 .. 1 => 0);
+
+      Class1 : aliased Class_Stub.Device_Class_Stub (1);
+      Class2 : aliased Class_Stub.Device_Class_Stub (2);
+
+      UDC : aliased UDC_Stub.Controller (Scenario'Unchecked_Access,
+                                         RX_Data'Unchecked_Access,
+                                         Has_Early_Address => False);
+      Ctrl : USB.Device.USB_Device;
+   begin
+
+      Ctrl.Register_Class (Class1'Unchecked_Access);
+      Ctrl.Register_Class (Class2'Unchecked_Access);
+
+      Ctrl.Initalize
+        (Controller      => UDC'Unchecked_Access,
+         Strings         => USB_Testing.UDC_Stub.Strings'Unchecked_Access,
+         Max_Packet_Size => 64);
+
+      Ctrl.Start;
+
+      loop
+         Ctrl.Poll;
+         pragma Warnings (Off, "possible infinite loop");
+         exit when UDC.End_Of_Scenario;
+         pragma Warnings (On, "possible infinite loop");
+      end loop;
+   end Two_Classes_UDC_Test;
 
 end USB_Testing.UDC_Scenarios;
