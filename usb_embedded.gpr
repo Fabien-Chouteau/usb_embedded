@@ -1,7 +1,9 @@
 -- begin auto-gpr-with --
 --  This section was automatically added by Alire
 with "hal.gpr";
+with "bbqueue.gpr";
 -- end auto-gpr-with --
+
 project Usb_Embedded is
 
    for Library_Name use "Usb_Embedded";

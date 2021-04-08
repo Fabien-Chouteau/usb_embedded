@@ -45,24 +45,27 @@ package body USB_Testing.Class_Stub is
                          Interface_Index :        Class_Index)
    is
    begin
-      if not Dev.Request_Endpoint (This.EP) then
+      if not Dev.Request_Endpoint (Bulk, This.EP) then
          raise Program_Error with "Cannot get EP for stub class " &
            This.Number'Img;
       end if;
       This.Interface_Index := Interface_Index;
    end Initialize;
 
-   ------------------------------
-   -- Config_Descriptor_Length --
-   ------------------------------
+   --------------------
+   -- Get_Class_Info --
+   --------------------
 
    overriding
-   function Config_Descriptor_Length (This : in out Device_Class_Stub)
-                                      return Positive
+   procedure Get_Class_Info
+     (This                     : in out Device_Class_Stub;
+      Number_Of_Interfaces     :    out UInt8;
+      Config_Descriptor_Length :    out Natural)
    is
    begin
-      return 50;
-   end Config_Descriptor_Length;
+      Number_Of_Interfaces := 1;
+      Config_Descriptor_Length := 50;
+   end Get_Class_Info;
 
    ----------------------------
    -- Fill_Config_Descriptor --
@@ -93,8 +96,7 @@ package body USB_Testing.Class_Stub is
 
       UDC.EP_Setup (EP       => (This.Ep, EP_Out),
                     Typ      => Interrupt,
-                    Max_Size => 4,
-                    Callback => null);
+                    Max_Size => 4);
 
       return USB.Handled;
    end Configure;
@@ -144,7 +146,8 @@ package body USB_Testing.Class_Stub is
    overriding
    procedure Transfer_Complete (This : in out Device_Class_Stub;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : USB.EP_Addr)
+                                EP   :        USB.EP_Addr;
+                                CNT  :        UInt11)
    is
       pragma Unreferenced (UDC);
    begin
@@ -154,28 +157,7 @@ package body USB_Testing.Class_Stub is
 
       Put_Line ("USB Class" & This.Number'Img &
                   " Transfer_Complete " &
-                  USB.Img (EP));
+                  USB.Img (EP) & " BCNT:" & CNT'Img);
    end Transfer_Complete;
-
-   ----------------
-   -- Data_Ready --
-   ----------------
-
-   overriding
-   procedure Data_Ready (This : in out Device_Class_Stub;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : USB.EP_Id;
-                         BCNT : UInt32)
-   is
-      pragma Unreferenced (UDC);
-   begin
-      if EP /= This.Ep then
-         raise Program_Error with "Unexpected Endpoint";
-      end if;
-
-      Put_Line ("USB Class" & This.Number'Img & " Data_Ready " &
-                  USB.Img (USB.EP_Addr'(EP, USB.EP_Out)) &
-                  "BCNT:" & BCNT'Img);
-   end Data_Ready;
 
 end USB_Testing.Class_Stub;

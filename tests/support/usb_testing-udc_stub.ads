@@ -39,46 +39,14 @@ with HAL; use HAL;
 with USB; use USB;
 with USB.Device; use USB.Device;
 with USB.HAL.Device; use USB.HAL.Device;
+with USB.Utils;
 
 package USB_Testing.UDC_Stub is
 
-   LANG_EN_US : constant USB.USB_String := (ASCII.HT, ASCII.EOT); -- 0x0409
-
-   Strings : aliased constant USB.String_Array :=
-     (
-      (0, new USB.String_Descriptor'(2 + 2,  3, LANG_EN_US)),
-      (1, new USB.String_Descriptor'(2 + 12 * 2, 3,
-       ('M', ASCII.NUL,
-        'a', ASCII.NUL,
-        'n', ASCII.NUL,
-        'u', ASCII.NUL,
-        'f', ASCII.NUL,
-        'a', ASCII.NUL,
-        'c', ASCII.NUL,
-        't', ASCII.NUL,
-        'u', ASCII.NUL,
-        'r', ASCII.NUL,
-        'e', ASCII.NUL,
-        'r', ASCII.NUL))),
-      (2, new USB.String_Descriptor'(2 + 7 * 2, 3,
-       ('P', ASCII.NUL,
-        'r', ASCII.NUL,
-        'o', ASCII.NUL,
-        'd', ASCII.NUL,
-        'u', ASCII.NUL,
-        'c', ASCII.NUL,
-        't', ASCII.NUL))),
-      (3, new USB.String_Descriptor'(2 + 6 * 2, 3,
-       ('S', ASCII.NUL,
-        'e', ASCII.NUL,
-        'r', ASCII.NUL,
-        'i', ASCII.NUL,
-        'a', ASCII.NUL,
-        'l', ASCII.NUL)))
-     );
-   --  String descriptor than can be used for testing
-
-   type Scenario_Event_Kind is (Set_Verbose, UDC_Event_E, Transfer_All);
+   type Scenario_Event_Kind is (Set_Verbose,
+                                UDC_Event_E,
+                                Transfer_Out,
+                                Transfer_In);
 
    type Scenario_Event (Kind : Scenario_Event_Kind := UDC_Event_E) is record
       case Kind is
@@ -86,17 +54,23 @@ package USB_Testing.UDC_Stub is
             Verbose : Boolean;
          when UDC_Event_E =>
             Evt     : UDC_Event;
-         when Transfer_All =>
-            EP : EP_Addr;
+         when Transfer_Out =>
+            EP_Out : EP_Id;
+            Count_Out  : Natural;
+         when Transfer_In =>
+            EP_In : EP_Id;
       end case;
    end record;
 
    type Stub_Scenario is array (Natural range <>) of Scenario_Event;
+   Empty_Scenario : constant Stub_Scenario (1 .. 0) := (others => <>);
 
    type Controller
      (Scenario          : not null access constant Stub_Scenario;
       RX_Data           : not null access constant UInt8_Array;
-      Has_Early_Address : Boolean)
+      Has_Early_Address : Boolean;
+      Max_Packet_Size   : UInt32;
+      EP_Buffers_Size   : Natural)
    is new USB_Device_Controller
    with private;
 
@@ -106,26 +80,20 @@ package USB_Testing.UDC_Stub is
    procedure Initialize (This : in out Controller);
 
    overriding
+   function Request_Buffer (This          : in out Controller;
+                            Ep            :        EP_Addr;
+                            Len           :        UInt11;
+                            Min_Alignment :        UInt8 := 1)
+                            return System.Address;
+
+   overriding
    procedure Start (This : in out Controller);
 
    overriding
+   procedure Reset (This : in out Controller);
+
+   overriding
    function Poll (This : in out Controller) return UDC_Event;
-
-   overriding
-   procedure Set_EP_Callback (This     : in out Controller;
-                              EP       : EP_Addr;
-                              Callback : EP_Callback);
-
-   overriding
-   procedure Set_Setup_Callback (This     : in out Controller;
-                                 EP       : EP_Id;
-                                 Callback : Setup_Callback);
-
-   overriding
-   procedure EP_Read_Packet (This : in out Controller;
-                             Ep   : EP_Id;
-                             Addr : System.Address;
-                             Len  : UInt32);
 
    overriding
    procedure EP_Write_Packet (This : in out Controller;
@@ -137,17 +105,19 @@ package USB_Testing.UDC_Stub is
    procedure EP_Setup (This     : in out Controller;
                        EP       : EP_Addr;
                        Typ      : EP_Type;
-                       Max_Size : UInt16;
-                       Callback : EP_Callback);
+                       Max_Size : UInt16);
 
    overriding
-   procedure EP_Set_NAK (This : in out Controller;
-                         EP   : EP_Addr;
-                         NAK  : Boolean);
+   procedure EP_Ready_For_Data (This  : in out Controller;
+                                EP    : EP_Id;
+                                Addr : System.Address;
+                                Size  : UInt32;
+                                Ready : Boolean := True);
 
    overriding
-   procedure EP_Set_Stall (This : in out Controller;
-                           EP   : EP_Addr);
+   procedure EP_Stall (This : in out Controller;
+                       EP   :        EP_Addr;
+                       Set  :        Boolean);
 
    overriding
    procedure Set_Address (This : in out Controller;
@@ -164,12 +134,15 @@ private
    use Event_Stack;
 
    type EP_Stub is record
-      Setup           : Boolean := False;
-      NAK             : Boolean := False;
-      Stall           : Boolean := False;
-      Typ             : EP_Type := Control;
-      Max_Size        : UInt16  := 0;
-      Bytes_Available : UInt11  := 0;
+      Setup            : Boolean := False;
+      NAK              : Boolean := False;
+      Stall            : Boolean := False;
+      Typ              : EP_Type := Control;
+      Buf              : System.Address := System.Null_Address;
+      Buf_Len          : UInt11 := 0;
+      Max_Size         : UInt16 := 0;
+
+      Scenario_Waiting_For_Data : Boolean := False;
    end record;
 
    type EP_Stub_Couple is array (EP_Dir) of EP_Stub;
@@ -183,7 +156,9 @@ private
    type Controller
      (Scenario          : not null access constant Stub_Scenario;
       RX_Data           : not null access constant UInt8_Array;
-      Has_Early_Address : Boolean)
+      Has_Early_Address : Boolean;
+      Max_Packet_Size   : UInt32;
+      EP_Buffers_Size   : Natural)
    is new USB_Device_Controller
    with record
       State : Controller_State := Nominal;
@@ -197,6 +172,8 @@ private
       EPs            : EP_Stub_Array (0 .. 5); -- Arbitrary number of EP
 
       Got_Ack        : Boolean := False;
+
+      Alloc          : USB.Utils.Basic_RAM_Allocator (EP_Buffers_Size);
    end record;
 
    function Pop (This : in out Controller) return Scenario_Event

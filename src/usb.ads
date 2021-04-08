@@ -96,8 +96,8 @@ package USB is
    function Img (EP : EP_Addr) return String
    is ("["  & EP.Dir'Img & EP.Num'Img & "]");
 
-   type String_ID is new UInt8;
-   Invalid_String_Id : constant String_ID := 0;
+   type String_Id is new UInt8;
+   Invalid_String_Id : constant String_Id := 0;
 
    type Lang_ID is new UInt16;
 
@@ -112,10 +112,22 @@ package USB is
       idVendor           : UInt16;
       idProduct          : UInt16;
       bcdDevice          : UInt16;
-      iManufacturer      : UInt8;
-      iProduct           : UInt8;
-      iSerialNumber      : UInt8;
+      iManufacturer      : String_Id;
+      iProduct           : String_Id;
+      iSerialNumber      : String_Id;
       bNumConfigurations : UInt8;
+   end record with Pack;
+
+   type Device_Qualifier is record
+      bLength            : UInt8;
+      bDescriptorType    : UInt8;
+      bcdUSB             : UInt16;
+      bDeviceClass       : UInt8;
+      bDeviceSubClass    : UInt8;
+      bDeviceProtocol    : UInt8;
+      bMaxPacketSize0    : UInt8;
+      bNumConfigurations : UInt8;
+      bReserved          : UInt8;
    end record with Pack;
 
    type String_Descriptor_Zero is record
@@ -126,23 +138,20 @@ package USB is
 
    subtype String_Range is UInt8 range 0 .. 253;
    --  The maximum length of a string is limited by the the bLength field of the
-   --  String Descriptor. This field is one byte: 0 .. 255, but bLength encode
-   --  to total size of the descriptor include bLenght and bDescriptorType
+   --  String Descriptor. This field is one byte: 0 .. 255, but bLength encodes
+   --  to total size of the descriptor including the bLenght and bDescriptorType
    --  fields (one byte each). So the remaining length for string is 255 - 2.
 
    type USB_String is array (String_Range range <>) of Character;
+
+   function To_USB_String (Str : String) return USB_String
+     with Pre => Str'Length * 2 <= String_Range'Last - String_Range'First + 1;
+   --  Convert Ada ASCII string to USB UTF16 string
 
    type String_Descriptor (bLength : UInt8) is record
       bDescriptorType    : UInt8 := 3;
       Str                : USB_String (3 .. bLength);
    end record with Pack;
-
-   type String_Rec is record
-      Index  : UInt8;
-      Str    : not null access constant String_Descriptor;
-   end record;
-
-   type String_Array is array (Natural range <>) of String_Rec;
 
    type Setup_Request_Answer is (Handled, Not_Supported, Next_Callback);
 
@@ -151,7 +160,7 @@ package USB is
    Verbose : constant Boolean := False;
 
    Control_Buffer_Size : constant := 256;
-   Max_Strings : constant := 1;
+   Max_Strings : constant := 5;
    Max_Total_String_Chars : constant := 256;
    Max_Classes : constant := 4;
 end USB;

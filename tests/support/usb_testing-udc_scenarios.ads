@@ -63,6 +63,12 @@ package USB_Testing.UDC_Scenarios is
                        Req    => ((Dev, 0, Stand, Device_To_Host),
                                   6, 16#0100#, 0, 64),
                        Req_EP => 0))
+
+        --  ACK the IN transfer with a ZLP
+        , (Kind => UDC_Event_E,
+           Evt  => (Kind => Transfer_Complete,
+                    EP   => (0, EP_Out),
+                    BCNT => 0))
        )
       );
 
@@ -76,8 +82,6 @@ package USB_Testing.UDC_Scenarios is
                        Req    => ((Dev, 0, Stand, Host_To_Device),
                                   5, Addr, 0, 0),
                        Req_EP => 0))
-        , (Kind    => Transfer_All,
-           EP      => (0, EP_In))
        )
       );
 
@@ -91,8 +95,45 @@ package USB_Testing.UDC_Scenarios is
                                   6, 16#0200#, 0, 255),
                        Req_EP => 0))
 
-        , (Kind    => Transfer_All,
-           EP      => (0, EP_In))
+        --  ACK the IN transfer with a ZLP
+        , (Kind => UDC_Event_E,
+           Evt  => (Kind => Transfer_Complete,
+                    EP   => (0, EP_Out),
+                    BCNT => 0))
+       )
+      );
+
+   function Set_Config (Verbose   : Boolean;
+                        Config_Id : UInt16 := 1)
+                        return UDC_Stub.Stub_Scenario
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       Req    => ((Dev, 0, Stand, Host_To_Device),
+                                  9, Config_Id, 0, 0),
+                       Req_EP => 0))
+       )
+      );
+
+   function Get_String (Verbose : Boolean; Id : String_Id; Ack : Boolean)
+                        return UDC_Stub.Stub_Scenario
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       Req    => ((Dev, 0, Stand, Device_To_Host),
+                                  6, 16#0300# + UInt16 (Id), 0, 255),
+                       Req_EP => 0))
+
+
+        --  ACK the IN transfer with a ZLP
+        , (if Ack then (Kind => UDC_Event_E,
+                        Evt  => (Kind => Transfer_Complete,
+                                 EP   => (0, EP_Out),
+                                 BCNT => 0))
+                  else (Kind => UDC_Event_E,
+                        Evt  => (Kind    => None)))
        )
       );
 

@@ -39,16 +39,17 @@ package USB.Device is
 
    -- Device Class Interface --
 
-   type USB_Device_Class is interface;
+   type USB_Device_Class is limited interface;
    type Any_USB_Device_Class is access all USB_Device_Class'Class;
 
-   procedure Initialize (This            : in out USB_Device_Class;
-                         Dev             : in out USB_Device;
-                         Interface_Index :        Class_Index)
+   procedure Initialize (This                 : in out USB_Device_Class;
+                         Dev                  : in out USB_Device;
+                         Base_Interface_Index :        Class_Index)
    is abstract;
 
-   function Config_Descriptor_Length (This : in out USB_Device_Class)
-                                      return Positive
+   procedure Get_Class_Info (This                     : in out USB_Device_Class;
+                             Number_Of_Interfaces     :    out UInt8;
+                             Config_Descriptor_Length :    out Natural)
    is abstract;
 
    procedure Fill_Config_Descriptor (This : in out USB_Device_Class;
@@ -76,13 +77,8 @@ package USB.Device is
 
    procedure Transfer_Complete (This : in out USB_Device_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : EP_Addr)
-   is abstract;
-
-   procedure Data_Ready (This : in out USB_Device_Class;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : EP_Id;
-                         BCNT : UInt32)
+                                EP   :        EP_Addr;
+                                CNT  :        UInt11)
    is abstract;
 
    -- Device --
@@ -96,14 +92,41 @@ package USB.Device is
    with Pre => not This.Initialized;
 
    function Request_Endpoint (This : in out USB_Device;
-                              EP   : out EP_Id)
+                              Typ  :        EP_Type;
+                              EP   :    out EP_Id)
                               return Boolean
      with Pre => not This.Initialized;
+   --  Allocate a non-control End-Point to be used by the class
 
-   procedure Initalize (This            : in out USB_Device;
-                        Controller      : not null Any_USB_Device_Controller;
-                        Strings         : not null access constant String_Array;
-                        Max_Packet_Size : UInt8)
+   function Request_Buffer (This : in out USB_Device;
+                            EP   :        EP_Addr;
+                            Len  :        UInt11)
+                            return System.Address
+     with Pre => not This.Initialized;
+   --  Allocate a buffer for the corresponding End-Point. This buffer should
+   --  then be used by the class for IN or OUT transfers depending on the given
+   --  EP address.
+   --
+   --  Return Null_Address if resquest fails (e.g. no memory available).
+
+   function Register_String (This : in out USB_Device;
+                             Str  : USB_String)
+                             return String_Id
+     with Pre => not This.Initialized
+                and then
+                 --  The USB String descriptor must fit in the control buffer,
+                 --  this is constraint on the length string that can be used
+                 --  in the device.
+                 Str'Length <= Control_Buffer_Size - 2;
+   --  Register a USB string
+
+   procedure Initialize
+     (This            : in out USB_Device;
+      Controller      : not null Any_USB_Device_Controller;
+      Manufacturer    : USB_String;
+      Product         : USB_String;
+      Serial_Number   : USB_String;
+      Max_Packet_Size : UInt8)
      with Post => This.Initialized;
 
    procedure Start (This : in out USB_Device)
@@ -123,12 +146,12 @@ private
 
    type Control_State is (Idle,
 
-                          --  In means Device to Host
+                          --  IN means Device to Host
                           Data_In,
                           Last_Data_In,
                           Status_In,
 
-                          --  Out means Host to Device
+                          --  OUT means Host to Device
                           Data_Out,
                           Last_Data_Out,
                           Status_Out);
@@ -155,29 +178,44 @@ private
 
    type Endpoint_Status_Array is array (USB.EP_Id) of Endpoint_Status;
 
+   type String_Info is record
+      From, To : Natural := 0;
+   end record;
+
+   type String_Info_Array
+   is array (String_Id range 1 .. Max_Strings) of String_Info;
+
    type USB_Device is tagged record
 
       Ctrl : Control_Machine;
 
       Max_Packet_Size : UInt8;
 
+      Is_Init : Boolean := False;
       UDC     : Any_USB_Device_Controller := null;
       Classes : Class_Array := (others => null);
       Endpoints : Endpoint_Status_Array;
-
-      Strings : access constant String_Array := null;
 
       Dev_Addr  : UInt7 := 0;
       Dev_State : Device_State := Idle;
 
       Initializing : Any_USB_Device_Class := null;
       --  Tacks which class is currently being initialized
+
+      Last_String_Id : String_Id := 0;
+      Last_String_Index : Natural := 0;
+      String_Buffer : String (1 .. Max_Total_String_Chars);
+      String_Indexes : String_Info_Array;
+
+      Manufacturer_Str : String_Id := Invalid_String_Id;
+      Product_Str      : String_Id := Invalid_String_Id;
+      Serial_Str       : String_Id := Invalid_String_Id;
    end record;
 
    procedure Stall_Control_EP (This : in out USB_Device);
 
    function Get_String (This  : in out USB_Device;
-                        Index : UInt8)
+                        Index : String_Id)
                         return Setup_Request_Answer;
 
    function Get_Descriptor (This : in out USB_Device;
@@ -192,11 +230,8 @@ private
                                return Setup_Request_Answer;
 
    procedure Transfer_Complete (This : in out USB_Device;
-                                EP   :        EP_Addr);
-
-   procedure Data_Ready (This  : in out USB_Device;
-                         EP    :        EP_Id;
-                         Count :        UInt11);
+                                EP   :        EP_Addr;
+                                CNT  :        UInt11);
 
    procedure Build_Config_Descriptor (This : in out USB_Device);
    --  Build the configuration descriptor in the control buffer from classes'
@@ -204,5 +239,19 @@ private
 
    procedure Build_Device_Descriptor (This : in out USB_Device);
    --  Build the device descriptor in the control buffer
+
+   procedure Build_Device_Qualifier (This : in out USB_Device);
+   --  Build the device qualifier in the control buffer
+
+   type Transfer_Buffer is new System.Address;
+   No_Buffer : constant Transfer_Buffer :=
+     Transfer_Buffer (System.Null_Address);
+
+   -------------
+   -- To_Addr --
+   -------------
+
+   function To_Addr (B : Transfer_Buffer) return System.Address
+   is (System.Address (B));
 
 end USB.Device;

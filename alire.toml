@@ -6,5 +6,6 @@ authors = ["Fabien Chouteau"]
 maintainers = ["Fabien Chouteau <chouteau@adacore.com>"]
 maintainers-logins = ["Fabien-Chouteau"]
 
-[[depends-on]]  # This line was added by `alr with`
-hal = "~0.1.0"  # This line was added by `alr with`
+[[depends-on]]
+hal = "~0.1.0"
+bbqueue = "~0.1.0"

@@ -12,7 +12,6 @@ package USB.HAL.Device is
    type UDC_Event_Kind is (None,
                            Reset,
                            Setup_Request,
-                           Data_Ready,
                            Transfer_Complete);
 
    type UDC_Event (Kind : UDC_Event_Kind := None) is record
@@ -20,11 +19,9 @@ package USB.HAL.Device is
          when Setup_Request =>
             Req    : Setup_Data;
             Req_EP : EP_Id;
-         when Data_Ready =>
-            RX_BCNT : UInt11;  -- Byte count (0 .. 1024)
-            RX_EP   : EP_Id;
          when Transfer_Complete =>
-            T_EP : EP_Addr;
+            EP   : EP_Addr;
+            BCNT : UInt11;  -- Byte count (0 .. 1024)
          when others => null;
       end case;
    end record;
@@ -34,30 +31,18 @@ package USB.HAL.Device is
    function Poll (This : in out USB_Device_Controller) return UDC_Event
    is abstract;
 
-   type EP_Callback is access procedure
-     (This : in out USB_Device_Controller'Class;
-      EP   : EP_Id);
-
-   type Setup_Callback is access procedure
-     (This : in out USB_Device_Controller'Class;
-      EP   : EP_Id;
-      Req  : Setup_Data);
-
-   procedure Set_EP_Callback (This     : in out USB_Device_Controller;
-                              EP       : EP_Addr;
-                              Callback : EP_Callback)
+   procedure Reset (This : in out USB_Device_Controller)
    is abstract;
+   --  Called when the host resets the device
 
-   procedure Set_Setup_Callback (This     : in out USB_Device_Controller;
-                                 EP       : EP_Id;
-                                 Callback : Setup_Callback)
+   function Request_Buffer (This          : in out USB_Device_Controller;
+                            Ep            :        EP_Addr;
+                            Len           :        UInt11;
+                            Min_Alignment :        UInt8 := 1)
+                            return System.Address
    is abstract;
-
-   procedure EP_Read_Packet (This : in out USB_Device_Controller;
-                             Ep   : EP_Id;
-                             Addr : System.Address;
-                             Len  : UInt32)
-   is abstract;
+   --  Allocate a buffer for the given End-Point, either from RAM or interal USB
+   --  Controller memory depending on the controller.
 
    procedure EP_Write_Packet (This : in out USB_Device_Controller;
                               Ep   : EP_Id;
@@ -68,18 +53,19 @@ package USB.HAL.Device is
    procedure EP_Setup (This     : in out USB_Device_Controller;
                        EP       : EP_Addr;
                        Typ      : EP_Type;
-                       Max_Size : UInt16;
-                       Callback : EP_Callback)
+                       Max_Size : UInt16)
    is abstract;
 
-   procedure EP_Set_NAK (This : in out USB_Device_Controller;
-                         EP   : EP_Addr;
-                         NAK  : Boolean)
-   is abstract
-     with Pre'Class => EP.Dir = EP_Out;
+   procedure EP_Ready_For_Data (This    : in out USB_Device_Controller;
+                                EP      : EP_Id;
+                                Addr    : System.Address;
+                                Max_Len : UInt32;
+                                Ready   : Boolean := True)
+   is abstract;
 
-   procedure EP_Set_Stall (This : in out USB_Device_Controller;
-                           EP   : EP_Addr)
+   procedure EP_Stall (This : in out USB_Device_Controller;
+                       EP   :        EP_Addr;
+                       Set  :        Boolean := True)
    is abstract;
 
    procedure Set_Address (This : in out USB_Device_Controller;
@@ -98,11 +84,8 @@ package USB.HAL.Device is
           when Setup_Request =>
              Evt.Kind'Img & " " & Img (EP_Addr'(Evt.Req_EP, EP_Out)) & " " &
                Img (Evt.Req),
-          when Data_Ready =>
-             Evt.Kind'Img & " " & Img (EP_Addr'(Evt.RX_EP, EP_Out)) &
-               " BCNT:" & Evt.RX_BCNT'Img,
           when Transfer_Complete =>
-             Evt.Kind'Img & " " & Img (Evt.T_EP),
+             Evt.Kind'Img & " " & Img (Evt.EP) & " BCNT:" & Evt.BCNT'Img,
           when others =>
             Evt.Kind'Img);
 

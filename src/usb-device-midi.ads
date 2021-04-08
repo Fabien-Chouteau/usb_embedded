@@ -35,13 +35,15 @@ package USB.Device.MIDI is
    is new USB_Device_Class with private;
 
    overriding
-   procedure Initialize (This            : in out Default_MIDI_Class;
-                         Dev             : in out USB_Device;
-                         Interface_Index :        Class_Index);
+   procedure Initialize (This                 : in out Default_MIDI_Class;
+                         Dev                  : in out USB_Device;
+                         Base_Interface_Index :        Class_Index);
 
    overriding
-   function Config_Descriptor_Length (This : in out Default_MIDI_Class)
-                                      return Positive;
+   procedure Get_Class_Info
+     (This                     : in out Default_MIDI_Class;
+      Number_Of_Interfaces     :    out UInt8;
+      Config_Descriptor_Length :    out Natural);
 
    overriding
    procedure Fill_Config_Descriptor (This : in out Default_MIDI_Class;
@@ -69,13 +71,8 @@ package USB.Device.MIDI is
    overriding
    procedure Transfer_Complete (This : in out Default_MIDI_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : EP_Addr);
-
-   overriding
-   procedure Data_Ready (This : in out Default_MIDI_Class;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : EP_Id;
-                         BCNT : UInt32);
+                                EP   :        EP_Addr;
+                                CNT  :        UInt11);
 
    function Ready (This : in out Default_MIDI_Class) return Boolean;
 

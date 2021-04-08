@@ -48,20 +48,22 @@ package body USB_Testing.UDC_Scenarios is
       Configuration : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Class : aliased Class_Stub.Device_Class_Stub (1);
-      MIDI  : aliased USB.Device.MIDI.Default_MIDI_Class;
 
       UDC : aliased UDC_Stub.Controller (Scenario'Unchecked_Access,
                                          RX_Data'Unchecked_Access,
-                                         Has_Early_Address => Early_Address);
+                                         Has_Early_Address => Early_Address,
+                                         Max_Packet_Size   => 64,
+                                         EP_Buffers_Size   => 256);
       Ctrl : USB.Device.USB_Device;
    begin
 
       Ctrl.Register_Class (Class'Unchecked_Access);
-      Ctrl.Register_Class (MIDI'Unchecked_Access);
 
-      Ctrl.Initalize
+      Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,
-         Strings         => USB_Testing.UDC_Stub.Strings'Unchecked_Access,
+         Manufacturer    => To_USB_String ("Manufacturer"),
+         Product         => To_USB_String ("Product"),
+         Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
 
       Ctrl.Start;
@@ -88,16 +90,20 @@ package body USB_Testing.UDC_Scenarios is
 
       UDC : aliased UDC_Stub.Controller (Scenario'Unchecked_Access,
                                          RX_Data'Unchecked_Access,
-                                         Has_Early_Address => False);
+                                         Has_Early_Address => False,
+                                         Max_Packet_Size   => 64,
+                                         EP_Buffers_Size   => 256);
       Ctrl : USB.Device.USB_Device;
    begin
 
       Ctrl.Register_Class (Class1'Unchecked_Access);
       Ctrl.Register_Class (Class2'Unchecked_Access);
 
-      Ctrl.Initalize
+      Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,
-         Strings         => USB_Testing.UDC_Stub.Strings'Unchecked_Access,
+         Manufacturer    => To_USB_String ("Manufacturer"),
+         Product         => To_USB_String ("Product"),
+         Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
 
       Ctrl.Start;

@@ -35,29 +35,32 @@ with Ada.Text_IO;
 package body USB.Device.MIDI is
 
    overriding
-   procedure Initialize (This            : in out Default_MIDI_Class;
-                         Dev             : in out USB_Device;
-                         Interface_Index :        Class_Index)
+   procedure Initialize (This                 : in out Default_MIDI_Class;
+                         Dev                  : in out USB_Device;
+                         Base_Interface_Index :        Class_Index)
    is
    begin
-      if not Dev.Request_Endpoint (This.EP) then
+      if not Dev.Request_Endpoint (Interrupt, This.EP) then
          raise Program_Error with "Cannot get EP for MIDI class";
       end if;
-      This.Interface_Index := Interface_Index;
+      This.Interface_Index := Base_Interface_Index;
    end Initialize;
 
-   ------------------------------
-   -- Config_Descriptor_Length --
-   ------------------------------
+   --------------------
+   -- Get_Class_Info --
+   --------------------
 
    overriding
-   function Config_Descriptor_Length (This : in out Default_MIDI_Class)
-                                      return Positive
+   procedure Get_Class_Info
+     (This                     : in out Default_MIDI_Class;
+      Number_Of_Interfaces     :    out UInt8;
+      Config_Descriptor_Length :    out Natural)
    is
       pragma Unreferenced (This);
    begin
-      return 91;
-   end Config_Descriptor_Length;
+      Number_Of_Interfaces := 1;
+      Config_Descriptor_Length := 91;
+   end Get_Class_Info;
 
    ----------------------------
    -- Fill_Config_Descriptor --
@@ -86,8 +89,8 @@ package body USB.Device.MIDI is
          This.Interface_Index, --  index of this interface
          0, --  alternate setting for this interface
          0, --  endpoints excl 0: number of endpoint descriptors to follow
-         1, --
-         1, --
+         1, --  Class audio
+         1, --  Subclass control
          0, --
          0, --  string index for interface */
 
@@ -231,12 +234,10 @@ package body USB.Device.MIDI is
 
          UDC.EP_Setup (EP       => (This.EP, EP_In),
                        Typ      => Bulk,
-                       Max_Size => This.Last_In'Length,
-                       Callback => null);
+                       Max_Size => This.Last_In'Length);
          UDC.EP_Setup (EP       => (This.EP, EP_Out),
                        Typ      => Bulk,
-                       Max_Size => This.Last_In'Length,
-                       Callback => null);
+                       Max_Size => This.Last_In'Length);
 
          This.State := Idle;
          return Handled;
@@ -321,20 +322,23 @@ package body USB.Device.MIDI is
    overriding
    procedure Transfer_Complete (This : in out Default_MIDI_Class;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : EP_Addr)
+                                EP   :        EP_Addr;
+                                CNT  :        UInt11)
    is
       Index : Natural := This.Last_In'First;
    begin
 
       pragma Assert (EP.Num = This.EP);
 
-      UDC.EP_Set_NAK (EP, False);
+      if True then
+         raise Program_Error with "TODO";
+      end if;
+      -- TODO UDC.EP_Ready_For_Data (EP.Num, 4, True);
 
       --  Setup the endpoint for the next packet
       UDC.EP_Setup (EP       => (This.EP, EP_Out),
                     Typ      => Bulk,
-                    Max_Size => This.Last_In'Length,
-                    Callback => null);
+                    Max_Size => This.Last_In'Length);
 
       --  Hex_Dump.Hex_Dump (This.Last_In (1 .. Integer (This.RX_BCNT)),
       --                     Ada.Text_IO.Put_Line'Access);
@@ -349,30 +353,6 @@ package body USB.Device.MIDI is
          This.RX_In_Index := (This.RX_In_Index + 1) mod FIFO_Size;
       end loop;
    end Transfer_Complete;
-
-   ----------------
-   -- Data_Ready --
-   ----------------
-
-   overriding
-   procedure Data_Ready (This : in out Default_MIDI_Class;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : EP_Id;
-                         BCNT : UInt32)
-   is
-   begin
-      pragma Assert (EP = This.EP);
-
-      if BCNT > This.Last_In'Length then
-         raise Program_Error;
-      end if;
-
-      This.RX_BCNT := BCNT;
-
-      UDC.EP_Read_Packet (Ep   => This.EP,
-                          Addr => This.Last_In'Address,
-                          Len  => This.Last_In'Length);
-   end Data_Ready;
 
    -----------
    -- Ready --

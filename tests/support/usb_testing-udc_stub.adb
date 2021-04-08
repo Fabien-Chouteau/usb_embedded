@@ -31,30 +31,19 @@
 
 with Ada.Text_IO;
 with Hex_Dump;
+with System; use System;
 
 package body USB_Testing.UDC_Stub is
-
-   procedure Reset (This : in out Controller'Class);
 
    procedure Check_Event (This : Controller'Class;
                           Evt  : UDC_Event);
    --  Raise an exception if the UDC event is not valid given the current
    --  configuration of the controller (e.g. data on stalled EP)
 
-   -----------
-   -- Reset --
-   -----------
 
-   procedure Reset (This : in out Controller'Class) is
-   begin
-      This.Put_Line ("UDC Reset EPs");
-      for EP_Couple of This.EPs loop
-         for EP of EP_Couple loop
-            EP := (others => <>);
-         end loop;
-      end loop;
-   end Reset;
-
+   procedure Do_Out_Transfer (This : in out Controller'Class;
+                              Ep   : EP_Id;
+                              Len  : UInt11);
    -----------------
    -- Check_Event --
    -----------------
@@ -91,40 +80,18 @@ package body USB_Testing.UDC_Stub is
                  Prefix & "EP Max_Size too small for Setup_Request";
             end if;
 
-         when Data_Ready =>
-            if Evt.RX_EP not in This.EPs'Range then
-               raise Program_Error with
-                 Prefix & "Invalid EP id in Data_Ready";
-            end if;
-
-            if not This.EPs (Evt.RX_EP) (EP_Out).Setup then
-               raise Program_Error with
-                 Prefix & "EP not setup for Data_Ready";
-            end if;
-
-            if This.EPs (Evt.RX_EP) (EP_Out).Stall then
-               raise Program_Error with
-                 Prefix & "EP stalled for Data_Ready";
-            end if;
-
-            if UInt16 (Evt.RX_BCNT) > This.EPs (Evt.RX_EP) (EP_Out).Max_Size
-            then
-               raise Program_Error with
-                 Prefix & "packet to big for EP in Data_Ready";
-            end if;
-
          when Transfer_Complete =>
-            if Evt.T_EP.Num not in This.EPs'Range then
+            if Evt.EP.Num not in This.EPs'Range then
                raise Program_Error with
                  Prefix & "Invalid EP id in Transfer_Complete";
             end if;
 
-            if not This.EPs (Evt.T_EP.Num) (Evt.T_EP.Dir).Setup then
+            if not This.EPs (Evt.EP.Num) (Evt.EP.Dir).Setup then
                raise Program_Error with
                  Prefix & "EP not setup for Transfer_Complete";
             end if;
 
-            if This.EPs (Evt.T_EP.Num) (Evt.T_EP.Dir).Stall then
+            if This.EPs (Evt.EP.Num) (Evt.EP.Dir).Stall then
                raise Program_Error with
                  Prefix & "EP stalled for Transfer_Complete";
             end if;
@@ -133,6 +100,59 @@ package body USB_Testing.UDC_Stub is
             null; -- Nothing to check
       end case;
    end Check_Event;
+
+   ---------------------
+   -- Do_Out_Transfer --
+   ---------------------
+
+   procedure Do_Out_Transfer (This : in out Controller'Class;
+                              Ep   : EP_Id;
+                              Len  : UInt11)
+   is
+   begin
+      if Len = 0 then
+         return;
+      end if;
+
+      This.Put_Line ("UDC OUT Transfer " & Img (EP_Addr'(Ep, EP_Out)) &
+                     Len'Img & " bytes");
+
+      if Ep not in This.EPs'Range then
+         raise Program_Error with "UDC Error: invalid EP number in EP_Read_Packet";
+      end if;
+
+      if not This.EPs (Ep) (EP_In).Setup then
+         raise Program_Error with "UDC Error: EP not setup in EP_Read_Packet";
+      end if;
+
+      if This.EPs (Ep) (EP_In).Stall then
+         raise Program_Error with "UDC Error: EP stalled in EP_Read_Packet";
+      end if;
+
+      if Len > This.EPs (Ep) (EP_Out).Buf_Len then
+         raise Program_Error with "UDC Error: Trying to write " & Len'Img &
+           " byte(s) to a" & This.EPs (Ep) (EP_Out).Buf_Len'Img &
+           " byte(s) EP OUT buffer";
+      end if;
+
+      if This.EPs (EP) (EP_Out).Buf = System.Null_Address then
+         raise Program_Error with "UDC Error: Trying to write to a null EP OUT buffer";
+      end if;
+
+      declare
+         Data : UInt8_Array (1 .. Natural (Len)) with Address => This.EPs (EP) (EP_Out).Buf;
+      begin
+         for Elt of Data loop
+            if This.RX_Index in This.RX_Data'Range then
+               Elt := This.RX_Data (This.RX_Index);
+               This.RX_Index := This.RX_Index + 1;
+            else
+               raise Program_Error with "UDC Error: Not enough data in RX_Data";
+            end if;
+         end loop;
+         This.Hex_Dump (Data);
+      end;
+   end Do_Out_Transfer;
 
    ---------------------
    -- End_Of_Scenario --
@@ -154,11 +174,34 @@ package body USB_Testing.UDC_Stub is
          This.Stack.Prepend (Elt);
       end loop;
 
+   This.Put_Line ("UDC Initialize");
 
-      This.Put_Line ("UDC Initialize");
-
-      Reset (This);
+      for EP_Couple of This.EPs loop
+         for EP of EP_Couple loop
+            EP := (others => <>);
+         end loop;
+      end loop;
    end Initialize;
+
+   --------------------
+   -- Request_Buffer --
+   --------------------
+
+   overriding
+   function Request_Buffer (This          : in out Controller;
+                            Ep            :        EP_Addr;
+                            Len           :        UInt11;
+                            Min_Alignment :        UInt8 := 1)
+                            return System.Address
+   is
+   begin
+      This.Put_Line ("UDC Request_Buffer (" & Img (EP) &
+                       ", Align =>" & Min_Alignment'Img &
+                       ", Len =>" & Len'Img & ")");
+      return Standard.USB.Utils.Allocate (This.Alloc,
+                                          Alignment => Min_Alignment,
+                                          Len => Len);
+   end Request_Buffer;
 
    -----------
    -- Start --
@@ -170,6 +213,17 @@ package body USB_Testing.UDC_Stub is
    begin
       This.Put_Line ("UDC Start");
    end Start;
+
+   -----------
+   -- Reset --
+   -----------
+
+   overriding
+   procedure Reset (This : in out Controller)
+   is
+   begin
+      This.Put_Line ("UDC Reset");
+   end Reset;
 
    ----------
    -- Poll --
@@ -201,8 +255,11 @@ package body USB_Testing.UDC_Stub is
                                            "on" else "off"));
                end if;
 
-            when Transfer_All =>
+            when Transfer_Out =>
                null;
+
+            when Transfer_In =>
+               This.EPs (Step.EP_In) (EP_In).Scenario_Waiting_For_Data := True;
 
             when UDC_Event_E =>
                Ret := Step.Evt;
@@ -219,84 +276,12 @@ package body USB_Testing.UDC_Stub is
          Reset (This);
       end if;
 
-      if Ret.Kind = Data_Ready then
-         This.EPs (Ret.RX_EP) (EP_Out).Bytes_Available := Ret.RX_BCNT;
+      if Ret.Kind = Transfer_Complete and then Ret.EP.Dir = EP_Out then
+         Do_Out_Transfer (This, Ret.EP.Num, Ret.BCNT);
       end if;
 
       return Ret;
    end Poll;
-
-   ---------------------
-   -- Set_EP_Callback --
-   ---------------------
-
-   overriding
-   procedure Set_EP_Callback (This     : in out Controller;
-                              EP       : EP_Addr;
-                              Callback : EP_Callback)
-   is
-   begin
-      null;
-   end Set_EP_Callback;
-
-   ------------------------
-   -- Set_Setup_Callback --
-   ------------------------
-
-   overriding
-   procedure Set_Setup_Callback (This     : in out Controller;
-                                 EP       : EP_Id;
-                                 Callback : Setup_Callback)
-   is
-   begin
-      null;
-   end Set_Setup_Callback;
-
-   --------------------
-   -- EP_Read_Packet --
-   --------------------
-
-   overriding
-   procedure EP_Read_Packet (This : in out Controller;
-                             Ep   : EP_Id;
-                             Addr : System.Address;
-                             Len  : UInt32)
-   is
-      Data : UInt8_Array (1 .. Natural (Len)) with Address => Addr;
-   begin
-      This.Put_Line ("UDC EP_Read_Packet " & Img (EP_Addr'(Ep, EP_Out)) &
-                     Len'Img & " bytes");
-
-      if Ep not in This.EPs'Range then
-         raise Program_Error with "UDC Error: invalid EP number in EP_Read_Packet";
-      end if;
-
-      if not This.EPs (Ep) (EP_In).Setup then
-         raise Program_Error with "UDC Error: EP not setup in EP_Read_Packet";
-      end if;
-
-      if This.EPs (Ep) (EP_In).Stall then
-         raise Program_Error with "UDC Error: EP stalled in EP_Read_Packet";
-      end if;
-
-      if Len > UInt32 (This.EPs (Ep) (EP_Out).Bytes_Available) then
-         raise Program_Error with "UDC Error: Trying to read too much data in EP_Read_Packet";
-      end if;
-
-      This.EPs (Ep) (EP_In).Bytes_Available :=
-        This.EPs (Ep) (EP_In).Bytes_Available - UInt11 (Len);
-
-      for Elt of Data loop
-         if This.RX_Index in This.RX_Data'Range then
-            Elt := This.RX_Data (This.RX_Index);
-            This.RX_Index := This.RX_Index + 1;
-         else
-            raise Program_Error with "UDC Error: Not enough data in RX_Data";
-         end if;
-      end loop;
-
-      This.Hex_Dump (Data);
-   end EP_Read_Packet;
 
    ---------------------
    -- EP_Write_Packet --
@@ -333,7 +318,9 @@ package body USB_Testing.UDC_Stub is
       This.Hex_Dump (Data);
 
       This.Push ((Kind => UDC_Event_E,
-                  Evt  => (Kind => Transfer_Complete, T_EP => (Ep, EP_In))));
+                  Evt  => (Kind => Transfer_Complete,
+                           EP   => (Ep, EP_In),
+                           BCNT => UInt11 (Len))));
 
    end EP_Write_Packet;
 
@@ -345,10 +332,8 @@ package body USB_Testing.UDC_Stub is
    procedure EP_Setup (This     : in out Controller;
                        EP       : EP_Addr;
                        Typ      : EP_Type;
-                       Max_Size : UInt16;
-                       Callback : EP_Callback)
+                       Max_Size : UInt16)
    is
-      pragma Unreferenced (Callback);
    begin
       This.Put_Line ("UDC EP_Setup " & Img (EP) &
                        " Type: " & Typ'Img &
@@ -363,46 +348,49 @@ package body USB_Testing.UDC_Stub is
       This.EPs (EP.Num) (EP.Dir).Max_Size := Max_Size;
    end EP_Setup;
 
-   ----------------
-   -- EP_Set_NAK --
-   ----------------
+   -----------------------
+   -- EP_Ready_For_Data --
+   -----------------------
 
    overriding
-   procedure EP_Set_NAK (This : in out Controller;
-                         EP   : EP_Addr;
-                         NAK  : Boolean)
+   procedure EP_Ready_For_Data (This  : in out Controller;
+                                EP    : EP_Id;
+                                Addr  : System.Address;
+                                Size  : UInt32;
+                                Ready : Boolean := True)
    is
    begin
-      This.Put_Line ("UDC EP_Set_NAK " & Img (EP) & " " & NAK'Img);
+      This.Put_Line ("UDC EP_Ready_For_Data " &
+                       Img (EP_Addr'(EP, EP_Out)) & " " & Ready'Img);
 
-      if EP.Dir /= EP_Out then
-         raise Program_Error with "UDC Error: cannot NAK IN endpoints";
+      if EP not in This.EPs'Range then
+         raise Program_Error
+           with "UDC Error: invalid EP number in EP_Ready_For_Data";
       end if;
 
-      if EP.Num not in This.EPs'Range then
-         raise Program_Error with "UDC Error: invalid EP number in EP_Set_NAK";
-      end if;
+      This.EPs (EP) (EP_Out).NAK := not Ready;
+      This.EPs (EP) (EP_Out).Buf_Len := UInt11 (Size);
+      This.EPs (EP) (EP_Out).Buf := Addr;
+   end EP_Ready_For_Data;
 
-      This.EPs (EP.Num) (EP.Dir).NAK := NAK;
-   end EP_Set_NAK;
-
-   ------------------
-   -- EP_Set_Stall --
-   ------------------
+   --------------
+   -- EP_Stall --
+   --------------
 
    overriding
-   procedure EP_Set_Stall (This : in out Controller;
-                           EP   : EP_Addr)
+   procedure EP_Stall (This : in out Controller;
+                       EP   : EP_Addr;
+                       Set  : Boolean)
    is
    begin
-      This.Put_Line ("UDC EP_Set_NAK " & Img (EP));
+      This.Put_Line ("UDC EP_Stall " & Img (EP) & " " & Set'Img);
 
       if EP.Num not in This.EPs'Range then
-         raise Program_Error with "UDC Error: invalid EP number in EP_Set_Stall";
+         raise Program_Error with "UDC Error: invalid EP number in EP_Stall";
       end if;
 
-      This.EPs (EP.Num) (EP.Dir).Stall := True;
-   end EP_Set_Stall;
+      This.EPs (EP.Num) (EP.Dir).Stall := Set;
+   end EP_Stall;
 
    -----------------
    -- Set_Address --

@@ -51,8 +51,10 @@ package USB_Testing.Class_Stub is
                          Interface_Index :        Class_Index);
 
    overriding
-   function Config_Descriptor_Length (This : in out Device_Class_Stub)
-                                      return Positive;
+   procedure Get_Class_Info
+     (This                     : in out Device_Class_Stub;
+      Number_Of_Interfaces     :    out UInt8;
+      Config_Descriptor_Length :    out Natural);
 
    overriding
    procedure Fill_Config_Descriptor (This : in out Device_Class_Stub;
@@ -80,13 +82,8 @@ package USB_Testing.Class_Stub is
    overriding
    procedure Transfer_Complete (This : in out Device_Class_Stub;
                                 UDC  : in out USB_Device_Controller'Class;
-                                EP   : USB.EP_Addr);
-
-   overriding
-   procedure Data_Ready (This : in out Device_Class_Stub;
-                         UDC  : in out USB_Device_Controller'Class;
-                         EP   : USB.EP_Id;
-                         BCNT : UInt32);
+                                EP   :        USB.EP_Addr;
+                                CNT  :        UInt11);
 
 private
 

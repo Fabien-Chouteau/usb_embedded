@@ -29,46 +29,23 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-private package USB.Device.Control is
+package body USB is
 
-   procedure Setup (This : in out USB_Device;
-                    EP   : EP_Id);
-   --  Handle setup request
+   -------------------
+   -- To_USB_String --
+   -------------------
 
-   procedure Control_In (This : in out USB_Device);
+   function To_USB_String (Str : String) return USB_String is
+      Ret : USB_String (String_Range'First .. Str'Length * 2 - 1) :=
+        (others => ASCII.NUL);
 
-   procedure Control_Out (This : in out USB_Device;
-                          BCNT : UInt11);
-   --  FIXME: Is BCNT useful?
+      Index : UInt8 := Ret'First;
+   begin
+      for C of Str loop
+         Ret (Index) := C;
+         Index := Index + 2;
+      end loop;
+      return Ret;
+   end To_USB_String;
 
-private
-
-   procedure Setup_Read (This : in out USB_Device);
-   --  Handle setup read request
-
-   procedure Setup_Write (This : in out USB_Device);
-   --  Handle setup write request
-
-   function Dispatch_Request (This : in out USB_Device)
-                              return Setup_Request_Answer;
-
-   function Dispatch_Request_To_Class (This : in out USB_Device)
-                                       return Setup_Request_Answer;
-
-   procedure Handle_Read_Request (This : in out USB_Device);
-   --  Handle setup read request
-
-   procedure Handle_Write_Request (This : in out USB_Device);
-   --  Handle setup write request
-
-   function Device_Request (This : in out USB_Device)
-                            return Setup_Request_Answer;
-
-   function Endpoint_Request (This : in out USB_Device)
-                              return Setup_Request_Answer;
-
-   procedure Send_Chunk (This : in out USB_Device);
-
-   procedure Receive_Chunk (This : in out USB_Device);
-
-end USB.Device.Control;
+end USB;

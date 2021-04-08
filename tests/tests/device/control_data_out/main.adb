@@ -23,9 +23,9 @@ procedure Main is
                                                42, 0, 0, 16),
                                    Req_EP  => 0)),
                     3 => (Kind => UDC_Event_E,
-                          Evt  =>  (Kind    => Data_Ready,
-                                    RX_EP   => 0,
-                                    RX_BCNT => 16)
+                          Evt  =>  (Kind => Transfer_Complete,
+                                    EP   => (0, EP_Out),
+                                    BCNT => 16)
                          )
                    );
 

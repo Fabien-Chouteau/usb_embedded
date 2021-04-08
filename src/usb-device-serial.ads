@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                        Copyright (C) 2021, AdaCore                       --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,75 +29,126 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with Interfaces;
+with BBqueue;
+with BBqueue.Buffers;
 
-package USB.Device.HID is
+package USB.Device.Serial is
 
-   type Default_HID_Class is new USB_Device_Class with private;
+   type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
+   is limited new USB_Device_Class with private;
+
+   type CDC_Line_Coding is record
+      Bitrate   : UInt32;
+      Stop_Bit  : UInt8;
+      Parity    : UInt8;
+      Data_Bits : UInt8;
+   end record
+     with Pack, Size => 56;
+
+   type CDC_Line_Control_State is record
+      DTE_Is_Present   : Boolean;
+      Half_Duplex_Carrier_control : Boolean;
+      Reserved : UInt14;
+   end record
+     with Pack, Size => 16;
+
+   function Line_Coding (This : Default_Serial_Class)
+                         return CDC_Line_Coding;
+
+   function List_Ctrl_State (This : Default_Serial_Class)
+                             return CDC_Line_Control_State;
+
+   ------------------------------------
+   -- Reading Data from the USB Host --
+   ------------------------------------
+
+   procedure Read (This : in out Default_Serial_Class;
+                   Buf  :        System.Address;
+                   Len  : in out UInt32);
+
+   procedure Read (This : in out Default_Serial_Class;
+                   Str  :    out String;
+                   Len  :    out UInt32);
+
+   ----------------------------------
+   -- Writing Data to the USB Host --
+   ----------------------------------
+
+   procedure Write (This : in out Default_Serial_Class;
+                    UDC  : in out USB_Device_Controller'Class;
+                    Buf  :        System.Address;
+                    Len  : in out UInt32);
+
+   procedure Write (This : in out Default_Serial_Class;
+                    UDC  : in out USB_Device_Controller'Class;
+                    Str  :        String;
+                    Len  :    out UInt32);
+
+private
 
    overriding
-   procedure Initialize (This                 : in out Default_HID_Class;
+   procedure Initialize (This                 : in out Default_Serial_Class;
                          Dev                  : in out USB_Device;
                          Base_Interface_Index :        Class_Index);
 
    overriding
    procedure Get_Class_Info
-     (This                     : in out Default_HID_Class;
+     (This                     : in out Default_Serial_Class;
       Number_Of_Interfaces     :    out UInt8;
       Config_Descriptor_Length :    out Natural);
 
    overriding
-   procedure Fill_Config_Descriptor (This : in out Default_HID_Class;
+   procedure Fill_Config_Descriptor (This : in out Default_Serial_Class;
                                      Data :    out UInt8_Array);
    overriding
-   function Configure (This  : in out Default_HID_Class;
+   function Configure (This  : in out Default_Serial_Class;
                        UDC   : in out USB_Device_Controller'Class;
                        Index : UInt16)
                        return Setup_Request_Answer;
 
    overriding
-   function Setup_Read_Request (This  : in out Default_HID_Class;
+   function Setup_Read_Request (This  : in out Default_Serial_Class;
                                 Req   : Setup_Data;
                                 Buf   : out System.Address;
                                 Len   : out Buffer_Len)
                                 return Setup_Request_Answer;
 
    overriding
-   function Setup_Write_Request (This  : in out Default_HID_Class;
+   function Setup_Write_Request (This  : in out Default_Serial_Class;
                                  Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer;
 
    overriding
-   procedure Transfer_Complete (This : in out Default_HID_Class;
+   procedure Transfer_Complete (This : in out Default_Serial_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11);
 
-   procedure Set_Move (This : in out Default_HID_Class;
-                       X, Y : Interfaces.Integer_8);
-
-   procedure Set_Click (This : in out Default_HID_Class;
-                        Btn1, Btn2, Btn3 : Boolean := False);
-
-   procedure Send_Report (This : in out Default_HID_Class;
-                          UDC  : in out USB_Device_Controller'Class);
-
-   function Ready (This : in out Default_HID_Class) return Boolean;
-
-private
-
-   type Class_State is (Stop, Idle, Busy);
-
-   Report_Size : constant := 3;
-
-   type Default_HID_Class is new USB_Device_Class with record
+   type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
+   is limited new USB_Device_Class with record
       Interface_Index : Class_Index;
-      EP              : USB.EP_Id;
-      Report          : UInt8_Array (1 .. Report_Size);
-      Report_Buf      : System.Address := System.Null_Address;
-      State           : Class_State := Stop;
-      Idle_State      : UInt8 := 0;
+      Int_EP          : USB.EP_Id;
+      Bulk_EP         : USB.EP_Id;
+      Iface_Str       : USB.String_Id;
+
+      Int_Buf         : System.Address;
+      Bulk_Out_Buf    : System.Address;
+      Bulk_In_Buf     : System.Address;
+
+      TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
+      RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
+
+      TX_In_Progress : Boolean := False with Volatile;
+
+      Coding : CDC_Line_Coding;
+      State  : CDC_Line_Control_State;
    end record;
 
-end USB.Device.HID;
+   procedure Setup_RX (This : in out Default_Serial_Class;
+                       UDC  : in out USB_Device_Controller'Class);
+
+   procedure Setup_TX (This : in out Default_Serial_Class;
+                       UDC  : in out USB_Device_Controller'Class);
+
+end USB.Device.Serial;

@@ -135,7 +135,7 @@ package body Hex_Dump is
       end loop;
 
       if Cnt /= 0 then
-         Put_Line (Str);
+         Put_Line (Str (Str'First .. Str'Last - (16 - Cnt)));
       end if;
    end Hex_Dump;
 
