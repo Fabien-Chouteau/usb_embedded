@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -35,10 +35,42 @@ package USB.Device.HID is
 
    type Default_HID_Class is new USB_Device_Class with private;
 
+   procedure Set_Move (This : in out Default_HID_Class;
+                       X, Y : Interfaces.Integer_8);
+   --  Set the relative movement of the mouse cursor
+
+   procedure Set_Click (This : in out Default_HID_Class;
+                        Btn1, Btn2, Btn3 : Boolean := False);
+   --  Set the mouse buttons state
+
+   function Ready (This : in out Default_HID_Class) return Boolean;
+   --  The class is ready to send a report
+
+   procedure Send_Report (This : in out Default_HID_Class;
+                          UDC  : in out USB_Device_Controller'Class)
+     with Pre => This.Ready;
+   --  Send a report to the host
+
+private
+
+   type Class_State is (Stop, Idle, Busy);
+
+   Report_Size : constant := 3;
+
+   type Default_HID_Class is new USB_Device_Class with record
+      Interface_Index : Class_Index;
+      EP              : USB.EP_Id;
+      Report          : UInt8_Array (1 .. Report_Size);
+      Report_Buf      : System.Address := System.Null_Address;
+      State           : Class_State := Stop;
+      Idle_State      : UInt8 := 0;
+   end record;
+
    overriding
-   procedure Initialize (This                 : in out Default_HID_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index);
+   function Initialize (This                 : in out Default_HID_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result;
 
    overriding
    procedure Get_Class_Info
@@ -73,31 +105,5 @@ package USB.Device.HID is
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11);
-
-   procedure Set_Move (This : in out Default_HID_Class;
-                       X, Y : Interfaces.Integer_8);
-
-   procedure Set_Click (This : in out Default_HID_Class;
-                        Btn1, Btn2, Btn3 : Boolean := False);
-
-   procedure Send_Report (This : in out Default_HID_Class;
-                          UDC  : in out USB_Device_Controller'Class);
-
-   function Ready (This : in out Default_HID_Class) return Boolean;
-
-private
-
-   type Class_State is (Stop, Idle, Busy);
-
-   Report_Size : constant := 3;
-
-   type Default_HID_Class is new USB_Device_Class with record
-      Interface_Index : Class_Index;
-      EP              : USB.EP_Id;
-      Report          : UInt8_Array (1 .. Report_Size);
-      Report_Buf      : System.Address := System.Null_Address;
-      State           : Class_State := Stop;
-      Idle_State      : UInt8 := 0;
-   end record;
 
 end USB.Device.HID;

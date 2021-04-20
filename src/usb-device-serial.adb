@@ -46,42 +46,41 @@ package body USB.Device.Serial is
    ----------------
 
    overriding
-   procedure Initialize (This                 : in out Default_Serial_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index)
+   function Initialize (This                 : in out Default_Serial_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result
    is
    begin
 
       --  Request Interrupt EP --
 
       if not Dev.Request_Endpoint (Interrupt, This.Int_EP) then
-         raise Program_Error with "Cannot get EP for Serial class";
+         return Not_Enough_EPs;
       end if;
 
       This.Int_Buf := Dev.Request_Buffer ((This.Int_EP, EP_In),
                                           Bulk_Buffer_Size);
       if This.Int_Buf = System.Null_Address then
-         raise Program_Error with "Cannot get Bulk Out buffer for Serial class";
+         return Not_Enough_EP_Buffer;
       end if;
 
       --  Request Bulk EPs --
 
       if not Dev.Request_Endpoint (Bulk, This.Bulk_EP) then
-         raise Program_Error with "Cannot get EP for Serial class";
+         return Not_Enough_EPs;
       end if;
 
       This.Bulk_Out_Buf := Dev.Request_Buffer ((This.Bulk_EP, EP_Out),
                                                Bulk_Buffer_Size);
       if This.Bulk_Out_Buf = System.Null_Address then
-         raise Program_Error with
-            "Cannot get Bulk Out buffer for Serial class";
+         return Not_Enough_EP_Buffer;
       end if;
 
       This.Bulk_In_Buf := Dev.Request_Buffer ((This.Bulk_EP, EP_In),
                                               Bulk_Buffer_Size);
       if This.Bulk_In_Buf = System.Null_Address then
-         raise Program_Error with
-             "Cannot get Bulk Out buffer for Serial class";
+         return Not_Enough_EP_Buffer;
       end if;
 
       -- Interface --
@@ -96,6 +95,8 @@ package body USB.Device.Serial is
       This.Coding.Stop_Bit := 0;
       This.Coding.Parity := 0;
       This.Coding.Data_Bits := 8;
+
+      return Ok;
    end Initialize;
 
    --------------------

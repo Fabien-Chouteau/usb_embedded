@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -158,9 +158,9 @@ package USB is
    subtype Buffer_Len is System.Storage_Elements.Storage_Offset;
 
    Verbose : constant Boolean := False;
+   Logs_Enabled : constant Boolean := True;
 
    Control_Buffer_Size : constant := 256;
    Max_Strings : constant := 5;
    Max_Total_String_Chars : constant := 256;
-   Max_Classes : constant := 4;
 end USB;

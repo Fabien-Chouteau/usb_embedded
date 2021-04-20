@@ -46,9 +46,10 @@ package USB_Testing.Class_Stub is
    with private;
 
    overriding
-   procedure Initialize (This            : in out Device_Class_Stub;
-                         Dev             : in out USB_Device;
-                         Interface_Index :        Class_Index);
+   function Initialize (This            : in out Device_Class_Stub;
+                        Dev             : in out USB_Device_Stack'Class;
+                        Interface_Index :        Class_Index)
+                        return Init_Result;
 
    overriding
    procedure Get_Class_Info

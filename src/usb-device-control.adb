@@ -58,7 +58,7 @@ package body USB.Device.Control is
    -- Setup --
    -----------
 
-   procedure Setup (This : in out USB_Device;
+   procedure Setup (This : in out USB_Device_Stack;
                             EP   : EP_Id)
    is
       Req : Setup_Data renames This.Ctrl.Req;
@@ -86,7 +86,7 @@ package body USB.Device.Control is
    -- Control_In --
    ----------------
 
-   procedure Control_In (This : in out USB_Device) is
+   procedure Control_In (This : in out USB_Device_Stack) is
    begin
       case This.Ctrl.State is
          when Data_In =>
@@ -130,7 +130,7 @@ package body USB.Device.Control is
    -- Control_Out --
    -----------------
 
-   procedure Control_Out (This : in out USB_Device;
+   procedure Control_Out (This : in out USB_Device_Stack;
                           BCNT : UInt11)
    is
    begin
@@ -177,7 +177,7 @@ package body USB.Device.Control is
    -- Setup_Read --
    ----------------
 
-   procedure Setup_Read (This : in out USB_Device)
+   procedure Setup_Read (This : in out USB_Device_Stack)
    is
    begin
       if Verbose then
@@ -190,7 +190,7 @@ package body USB.Device.Control is
    -- Setup_Write --
    -----------------
 
-   procedure Setup_Write (This : in out USB_Device) is
+   procedure Setup_Write (This : in out USB_Device_Stack) is
       Req : Setup_Data renames This.Ctrl.Req;
    begin
       if Verbose then
@@ -232,7 +232,7 @@ package body USB.Device.Control is
    -- Device_Request --
    --------------------
 
-   function Device_Request  (This : in out USB_Device)
+   function Device_Request  (This : in out USB_Device_Stack)
                              return Setup_Request_Answer
    is
       Req : Setup_Data renames This.Ctrl.Req;
@@ -267,7 +267,7 @@ package body USB.Device.Control is
    -- Endpoint_Request --
    ----------------------
 
-   function Endpoint_Request (This : in out USB_Device)
+   function Endpoint_Request (This : in out USB_Device_Stack)
                               return Setup_Request_Answer
    is
       Req   : Setup_Data renames This.Ctrl.Req;
@@ -312,7 +312,7 @@ package body USB.Device.Control is
    -- Dispatch_Request_To_Class --
    -------------------------------
 
-   function Dispatch_Request_To_Class (This : in out USB_Device)
+   function Dispatch_Request_To_Class (This : in out USB_Device_Stack)
                                        return Setup_Request_Answer
    is
       Req : Setup_Data renames This.Ctrl.Req;
@@ -362,7 +362,7 @@ package body USB.Device.Control is
    -- Dispatch_Request --
    ----------------------
 
-   function Dispatch_Request (This : in out USB_Device)
+   function Dispatch_Request (This : in out USB_Device_Stack)
                               return Setup_Request_Answer
    is
       Req : Setup_Data renames This.Ctrl.Req;
@@ -402,7 +402,7 @@ package body USB.Device.Control is
    -- Handle_Read_Request --
    -------------------------
 
-   procedure Handle_Read_Request (This : in out USB_Device) is
+   procedure Handle_Read_Request (This : in out USB_Device_Stack) is
       Req : Setup_Data renames This.Ctrl.Req;
    begin
       if Dispatch_Request (This) /= Not_Supported then
@@ -436,7 +436,7 @@ package body USB.Device.Control is
    -- Handle_Write_Request --
    --------------------------
 
-   procedure Handle_Write_Request (This : in out USB_Device) is
+   procedure Handle_Write_Request (This : in out USB_Device_Stack) is
    begin
       if Dispatch_Request (This) /= Not_Supported then
          --  zero-length-packet to ack the setup req
@@ -452,7 +452,7 @@ package body USB.Device.Control is
    -- Send_Chunk --
    ----------------
 
-   procedure Send_Chunk (This : in out USB_Device) is
+   procedure Send_Chunk (This : in out USB_Device_Stack) is
    begin
       if Buffer_Len (This.Max_Packet_Size) < This.Ctrl.Len then
 
@@ -486,7 +486,7 @@ package body USB.Device.Control is
    -- Receive_Chunk --
    -------------------
 
-   procedure Receive_Chunk (This : in out USB_Device) is
+   procedure Receive_Chunk (This : in out USB_Device_Stack) is
       Read_Size : constant Buffer_Len :=
         Buffer_Len'Min (Buffer_Len (This.Max_Packet_Size),
                         Buffer_Len (This.Ctrl.Req.Length) - This.Ctrl.Len);

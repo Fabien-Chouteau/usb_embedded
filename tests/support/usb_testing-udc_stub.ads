@@ -70,7 +70,8 @@ package USB_Testing.UDC_Stub is
       RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
-      EP_Buffers_Size   : Natural)
+      EP_Buffers_Size   : Natural;
+      Number_Of_EPs     : EP_Id)
    is new USB_Device_Controller
    with private;
 
@@ -85,6 +86,12 @@ package USB_Testing.UDC_Stub is
                             Len           :        UInt11;
                             Min_Alignment :        UInt8 := 1)
                             return System.Address;
+
+   overriding
+   function Valid_EP_Id (This : in out Controller;
+                         EP   :        EP_Id)
+                         return Boolean
+   is (EP <= This.Number_Of_EPs);
 
    overriding
    procedure Start (This : in out Controller);
@@ -158,7 +165,8 @@ private
       RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
-      EP_Buffers_Size   : Natural)
+      EP_Buffers_Size   : Natural;
+      Number_Of_EPs     : EP_Id)
    is new USB_Device_Controller
    with record
       State : Controller_State := Nominal;

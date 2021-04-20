@@ -30,7 +30,7 @@
 ------------------------------------------------------------------------------
 
 with BBqueue;
-with BBqueue.Buffers;
+private with BBqueue.Buffers;
 
 package USB.Device.Serial is
 
@@ -86,10 +86,37 @@ package USB.Device.Serial is
 
 private
 
+   type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
+   is limited new USB_Device_Class with record
+      Interface_Index : Class_Index;
+      Int_EP          : USB.EP_Id;
+      Bulk_EP         : USB.EP_Id;
+      Iface_Str       : USB.String_Id;
+
+      Int_Buf         : System.Address;
+      Bulk_Out_Buf    : System.Address;
+      Bulk_In_Buf     : System.Address;
+
+      TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
+      RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
+
+      TX_In_Progress : Boolean := False with Volatile;
+
+      Coding : CDC_Line_Coding;
+      State  : CDC_Line_Control_State;
+   end record;
+
+   procedure Setup_RX (This : in out Default_Serial_Class;
+                       UDC  : in out USB_Device_Controller'Class);
+
+   procedure Setup_TX (This : in out Default_Serial_Class;
+                       UDC  : in out USB_Device_Controller'Class);
+
    overriding
-   procedure Initialize (This                 : in out Default_Serial_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index);
+   function Initialize (This                 : in out Default_Serial_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result;
 
    overriding
    procedure Get_Class_Info
@@ -124,31 +151,5 @@ private
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11);
-
-   type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
-   is limited new USB_Device_Class with record
-      Interface_Index : Class_Index;
-      Int_EP          : USB.EP_Id;
-      Bulk_EP         : USB.EP_Id;
-      Iface_Str       : USB.String_Id;
-
-      Int_Buf         : System.Address;
-      Bulk_Out_Buf    : System.Address;
-      Bulk_In_Buf     : System.Address;
-
-      TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
-      RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
-
-      TX_In_Progress : Boolean := False with Volatile;
-
-      Coding : CDC_Line_Coding;
-      State  : CDC_Line_Control_State;
-   end record;
-
-   procedure Setup_RX (This : in out Default_Serial_Class;
-                       UDC  : in out USB_Device_Controller'Class);
-
-   procedure Setup_TX (This : in out Default_Serial_Class;
-                       UDC  : in out USB_Device_Controller'Class);
 
 end USB.Device.Serial;

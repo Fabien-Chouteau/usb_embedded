@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,15 +29,69 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with HAL;
+
+with BBqueue;
+private with BBqueue.Buffers;
+private with Atomic;
+
 package USB.Device.MIDI is
 
-   type Default_MIDI_Class
-   is new USB_Device_Class with private;
+   type Default_MIDI_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
+   is limited new USB_Device_Class with private;
+
+   subtype MIDI_Event is Standard.HAL.UInt32;
+
+   function Receive (This : in out Default_MIDI_Class;
+                     Evt  :    out MIDI_Event)
+                     return Boolean;
+   --  Return True if a MIDI event was sucessfully extracted from the receive
+   --  FIFO. Return False if the FIFO is empty.
+
+   procedure Send (This : in out Default_MIDI_Class;
+                   UDC  : in out USB_Device_Controller'Class;
+                   Evt  :        MIDI_Event);
+private
+
+   type Class_State is (Stop, Idle, Data_Ready);
+
+   subtype Message is UInt8_Array (1 .. 4);
+
+   type Message_Array is array (Natural range <>) of Message;
+
+   FIFO_Size : constant := 8;
+
+   type Default_MIDI_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
+   is limited new USB_Device_Class with record
+      Interface_Index : Class_Index;
+      EP : USB.EP_Id;
+
+      EP_Out_Buf    : System.Address;
+      EP_In_Buf     : System.Address;
+
+      TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
+      RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
+
+      TX_In_Progress : aliased Atomic.Flag := Atomic.Init (False);
+
+      State      : Class_State := Stop;
+      Idle_State : UInt8 := 0;
+
+      RX_Discarded : UInt32 := 0;
+      TX_Discarded : UInt32 := 0;
+   end record;
+
+   procedure Setup_RX (This : in out Default_MIDI_Class;
+                       UDC  : in out USB_Device_Controller'Class);
+
+   procedure Setup_TX (This : in out Default_MIDI_Class;
+                       UDC  : in out USB_Device_Controller'Class);
 
    overriding
-   procedure Initialize (This                 : in out Default_MIDI_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index);
+   function Initialize (This                 : in out Default_MIDI_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result;
 
    overriding
    procedure Get_Class_Info
@@ -73,36 +127,5 @@ package USB.Device.MIDI is
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11);
-
-   function Ready (This : in out Default_MIDI_Class) return Boolean;
-
-   function Last (This : in out Default_MIDI_Class) return UInt8_Array
-     with Pre => This.Ready;
-
-private
-
-   type Class_State is (Stop, Idle, Data_Ready);
-
-   subtype Message is UInt8_Array (1 .. 4);
-
-   type Message_Array is array (Natural range <>) of Message;
-
-   FIFO_Size : constant := 8;
-
-   type Default_MIDI_Class is new USB_Device_Class with record
-      Interface_Index : Class_Index;
-      EP : USB.EP_Id;
-
-      Last_In    : UInt8_Array (1 .. 64) := (others => 0);
-      RX_BCNT    : UInt32 := 0;
-
-      RX_FIFO      : Message_Array (0 .. FIFO_Size - 1);
-      RX_FIFO_CNT  : Natural := 0;
-      RX_In_Index  : Natural := 0;
-      RX_Out_Index : Natural := 0;
-
-      State      : Class_State := Stop;
-      Idle_State : UInt8 := 0;
-   end record;
 
 end USB.Device.MIDI;

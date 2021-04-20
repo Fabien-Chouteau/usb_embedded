@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,21 +29,180 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
---  with Hex_Dump;
-with Ada.Text_IO;
+with System; use System;
+
+with USB.Utils;
+with USB.Logging.Device;
+
+with BBqueue;         use BBqueue;
+with BBqueue.Buffers; use BBqueue.Buffers;
 
 package body USB.Device.MIDI is
 
-   overriding
-   procedure Initialize (This                 : in out Default_MIDI_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index)
+   EP_Buffer_Size : constant := 64;
+
+   -------------
+   -- Receive --
+   -------------
+
+   function Receive (This : in out Default_MIDI_Class;
+                     Evt  :    out MIDI_Event)
+                     return Boolean
+   is
+      RG : BBqueue.Buffers.Read_Grant;
+   begin
+
+      --  if Logs_Enabled then
+      --     USB.Logging.Device.Log_MIDI_Receive;
+      --  end if;
+
+      Read (This.RX_Queue, RG, 4);
+
+      if State (RG) = Valid then
+         declare
+            Src : MIDI_Event with Address => Slice (RG).Addr;
+         begin
+            Evt := Src;
+         end;
+
+         Release (This.RX_Queue, RG);
+         return True;
+      else
+         return False;
+      end if;
+   end Receive;
+
+   ----------
+   -- Send --
+   ----------
+
+   procedure Send (This : in out Default_MIDI_Class;
+                   UDC  : in out USB_Device_Controller'Class;
+                   Evt  :        MIDI_Event)
+   is
+      WG : BBqueue.Buffers.Write_Grant;
+   begin
+
+      if Logs_Enabled then
+         USB.Logging.Device.Log_MIDI_Send;
+      end if;
+
+      Grant (This.TX_Queue, WG, 4);
+
+      if State (WG) = Valid then
+         declare
+            Dst : MIDI_Event with Address => Slice (WG).Addr;
+         begin
+            Dst := Evt;
+         end;
+
+         Commit (This.TX_Queue, WG);
+      else
+         This.TX_Discarded := This.TX_Discarded + 1;
+      end if;
+
+      This.Setup_TX (UDC);
+   end Send;
+
+   --------------
+   -- Setup_RX --
+   --------------
+
+   procedure Setup_RX (This : in out Default_MIDI_Class;
+                       UDC  : in out USB_Device_Controller'Class)
    is
    begin
-      if not Dev.Request_Endpoint (Interrupt, This.EP) then
-         raise Program_Error with "Cannot get EP for MIDI class";
+
+      if Logs_Enabled then
+         USB.Logging.Device.Log_MIDI_Setup_RX;
       end if;
+
+      UDC.EP_Ready_For_Data (EP      => This.EP,
+                             Addr    => This.EP_Out_Buf,
+                             Max_Len => EP_Buffer_Size,
+                             Ready   => True);
+   end Setup_RX;
+
+   --------------
+   -- Setup_TX --
+   --------------
+
+   procedure Setup_TX (This : in out Default_MIDI_Class;
+                       UDC  : in out USB_Device_Controller'Class)
+   is
+      RG : BBqueue.Buffers.Read_Grant;
+
+      In_Progress : Boolean;
+   begin
+
+      if Logs_Enabled then
+         USB.Logging.Device.Log_MIDI_Setup_TX;
+      end if;
+
+      Atomic.Test_And_Set (This.TX_In_Progress, In_Progress);
+      if In_Progress then
+         return;
+      end if;
+
+      Read (This.TX_Queue, RG, EP_Buffer_Size);
+
+      if State (RG) = Valid then
+
+         --  Copy into IN buffer
+         USB.Utils.Copy (Src   => Slice (RG).Addr,
+                         Dst   => This.EP_In_Buf,
+                         Count => Natural (Slice (RG).Length));
+
+         if Logs_Enabled then
+            USB.Logging.Device.Log_MIDI_Write_Packet;
+         end if;
+
+         --  Send IN buffer
+         UDC.EP_Write_Packet (Ep   => This.EP,
+                              Addr => This.EP_In_Buf,
+                              Len  => UInt32 (Slice (RG).Length));
+
+         Release (This.TX_Queue, RG);
+      else
+         Atomic.Clear (This.TX_In_Progress);
+      end if;
+   end Setup_TX;
+
+   ----------------
+   -- Initialize --
+   ----------------
+
+   overriding
+   function Initialize (This                 : in out Default_MIDI_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result
+   is
+   begin
+
+      if Logs_Enabled then
+         USB.Logging.Device.Log_MIDI_Init;
+      end if;
+
+      if not Dev.Request_Endpoint (Interrupt, This.EP) then
+         return Not_Enough_EPs;
+      end if;
+
+      This.EP_Out_Buf := Dev.Request_Buffer ((This.EP, EP_Out),
+                                             EP_Buffer_Size);
+      if This.EP_Out_Buf = System.Null_Address then
+         return Not_Enough_EP_Buffer;
+      end if;
+
+      This.EP_In_Buf := Dev.Request_Buffer ((This.EP, EP_In),
+                                            EP_Buffer_Size);
+      if This.EP_In_Buf = System.Null_Address then
+         return Not_Enough_EP_Buffer;
+      end if;
+
       This.Interface_Index := Base_Interface_Index;
+
+      return Ok;
    end Initialize;
 
    --------------------
@@ -58,8 +217,8 @@ package body USB.Device.MIDI is
    is
       pragma Unreferenced (This);
    begin
-      Number_Of_Interfaces := 1;
-      Config_Descriptor_Length := 91;
+      Number_Of_Interfaces := 2;
+      Config_Descriptor_Length := 92;
    end Get_Class_Info;
 
    ----------------------------
@@ -83,7 +242,7 @@ package body USB.Device.MIDI is
       --  default pipe (endpoint 0) for all communication purposes. Class-specific AudioControl
       --  Requests are sent using the default pipe. There is no Status Interrupt endpoint provided.
       --  descriptor follows inline: */
-      Data (F + 0 .. F + 90) :=
+      Data (F + 0 .. F + 91) :=
         (9, --  sizeof(usbDescrInterface): length of descriptor in bytes
          USB_DESC_TYPE_INTERFACE, --  descriptor type
          This.Interface_Index, --  index of this interface
@@ -116,11 +275,11 @@ package body USB.Device.MIDI is
          --  descriptor follows inline: */
          9, --  length of descriptor in bytes */
          USB_DESC_TYPE_INTERFACE, --  descriptor type */
-         1, --  index of this interface */
+         This.Interface_Index + 1, --  index of this interface */
          0, --  alternate setting for this interface */
          2, --  endpoints excl 0: number of endpoint descriptors to follow */
          1, --  AUDIO */
-         3, --  MS */
+         3, --  MIDI Streaming */
          0, --  unused */
          0, --  string index for interface */
 
@@ -180,9 +339,9 @@ package body USB.Device.MIDI is
          --  descriptor follows inline: */
          9, --  bLenght */
          USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
-         1, --  bEndpointAddress OUT endpoint number 1 */
-         3, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint */
-         8, 0, --  wMaxPacketSize */
+         UInt8 (This.EP), --  bEndpointAddress OUT endpoint number 1 */
+         2, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint */
+         EP_Buffer_Size, 0, --  wMaxPacketSize */
          10, --  bInterval in ms */
          0, --  bRefresh */
          0, --  bSyncAddress */
@@ -201,9 +360,9 @@ package body USB.Device.MIDI is
          --  descriptor follows inline: */
          9, --  bLenght */
          USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
-         16#81#, --  bEndpointAddress IN endpoint number 1 */
-         3, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint */
-         8, 0, --  wMaxPacketSize */
+         16#80# or UInt8 (This.EP), --  bEndpointAddress IN endpoint number 1 */
+         2, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint */
+         EP_Buffer_Size, 0, --  wMaxPacketSize */
          10, --  bInterval in ms */
          0, --  bRefresh */
          0, --  bSyncAddress */
@@ -213,7 +372,8 @@ package body USB.Device.MIDI is
          5, --  bLength of descriptor in bytes */
          37, --  bDescriptorType */
          1, --  bDescriptorSubtype */
-         1 --  bNumEmbMIDIJack (0) */
+         1, --  bNumEmbMIDIJack (0) */
+         3  --  baAssocJackID (0) */
         );
 
 
@@ -230,14 +390,20 @@ package body USB.Device.MIDI is
       return Setup_Request_Answer
    is
    begin
+      if Logs_Enabled then
+         USB.Logging.Device.Log_MIDI_Config;
+      end if;
+
       if Index = 1 then
 
          UDC.EP_Setup (EP       => (This.EP, EP_In),
                        Typ      => Bulk,
-                       Max_Size => This.Last_In'Length);
+                       Max_Size => EP_Buffer_Size);
          UDC.EP_Setup (EP       => (This.EP, EP_Out),
                        Typ      => Bulk,
-                       Max_Size => This.Last_In'Length);
+                       Max_Size => EP_Buffer_Size);
+
+         This.Setup_RX (UDC);
 
          This.State := Idle;
          return Handled;
@@ -258,8 +424,6 @@ package body USB.Device.MIDI is
                                 return Setup_Request_Answer
    is
    begin
-      Ada.Text_IO.Put_Line (Img (Req));
-
       Buf := System.Null_Address;
       Len := 0;
 
@@ -279,7 +443,7 @@ package body USB.Device.MIDI is
          when 11 => -- SET_PROTOCOL
             return Not_Supported;
          when others =>
-            raise Program_Error with "Unknown MIDI requset";
+            return Next_Callback;
          end case;
       end if;
 
@@ -300,8 +464,7 @@ package body USB.Device.MIDI is
          end;
       end if;
 
-      raise Program_Error with "You have to implement stuff here";
-      return Not_Supported;
+      return Next_Callback;
    end Setup_Read_Request;
 
    -------------------------
@@ -325,58 +488,51 @@ package body USB.Device.MIDI is
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11)
    is
-      Index : Natural := This.Last_In'First;
    begin
+      if EP = (This.EP, EP_Out) then
 
-      pragma Assert (EP.Num = This.EP);
+         if Logs_Enabled then
+            USB.Logging.Device.Log_MIDI_Out_TC;
+         end if;
 
-      if True then
-         raise Program_Error with "TODO";
+         --  Move OUT data to the RX queue
+         declare
+            WG : BBqueue.Buffers.Write_Grant;
+         begin
+            Grant (This.RX_Queue, WG, BBqueue.Count (CNT));
+
+            if State (WG) = Valid then
+
+               USB.Utils.Copy (Src   => This.EP_Out_Buf,
+                               Dst   => Slice (WG).Addr,
+                               Count => CNT);
+
+               Commit (This.RX_Queue, WG, BBqueue.Count (CNT));
+            else
+
+               if Logs_Enabled then
+                  USB.Logging.Device.Log_MIDI_RX_Discarded;
+               end if;
+
+               This.RX_Discarded := This.RX_Discarded + 1;
+            end if;
+         end;
+
+         This.Setup_RX (UDC);
+
+      elsif EP = (This.EP, EP_In) then
+
+         if Logs_Enabled then
+            USB.Logging.Device.Log_MIDI_In_TC;
+         end if;
+
+         Atomic.Clear (This.TX_In_Progress);
+
+         This.Setup_TX (UDC);
+
+      else
+         raise Program_Error with "Not expecting transfer on EP";
       end if;
-      -- TODO UDC.EP_Ready_For_Data (EP.Num, 4, True);
-
-      --  Setup the endpoint for the next packet
-      UDC.EP_Setup (EP       => (This.EP, EP_Out),
-                    Typ      => Bulk,
-                    Max_Size => This.Last_In'Length);
-
-      --  Hex_Dump.Hex_Dump (This.Last_In (1 .. Integer (This.RX_BCNT)),
-      --                     Ada.Text_IO.Put_Line'Access);
-
-      while This.RX_BCNT >= 4 and then This.RX_FIFO_CNT <= FIFO_Size loop
-         This.RX_FIFO (This.RX_In_Index) :=
-           This.Last_In (Index .. Index + 4 - 1);
-
-         Index := Index + 4;
-         This.RX_BCNT := This.RX_BCNT - 4;
-         This.RX_FIFO_CNT := This.RX_FIFO_CNT + 1;
-         This.RX_In_Index := (This.RX_In_Index + 1) mod FIFO_Size;
-      end loop;
    end Transfer_Complete;
-
-   -----------
-   -- Ready --
-   -----------
-
-   function Ready (This : in out Default_MIDI_Class) return Boolean
-   is (This.RX_FIFO_CNT /= 0);
-
-   ----------
-   -- Last --
-   ----------
-
-   function Last (This : in out Default_MIDI_Class) return UInt8_Array
-   is
-   begin
-      if This.RX_FIFO_CNT = 0 then
-         return UInt8_Array'(1 .. 0 => 0);
-      end if;
-
-      return E : Message do
-         E := This.RX_FIFO (This.RX_Out_Index);
-         This.RX_Out_Index := (This.RX_Out_Index + 1) mod FIFO_Size;
-         This.RX_FIFO_CNT := This.RX_FIFO_CNT - 1;
-      end return;
-   end Last;
 
 end USB.Device.MIDI;

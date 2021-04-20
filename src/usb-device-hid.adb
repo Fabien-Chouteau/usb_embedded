@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -71,21 +71,24 @@ package body USB.Device.HID is
    ----------------
 
    overriding
-   procedure Initialize (This                 : in out Default_HID_Class;
-                         Dev                  : in out USB_Device;
-                         Base_Interface_Index :        Class_Index)
+   function Initialize (This                 : in out Default_HID_Class;
+                        Dev                  : in out USB_Device_Stack'Class;
+                        Base_Interface_Index :        Class_Index)
+                        return Init_Result
    is
    begin
       if not Dev.Request_Endpoint (Interrupt, This.EP) then
-         raise Program_Error with "Cannot get EP for HID class";
+         return Not_Enough_EPs;
       end if;
 
       This.Report_Buf := Dev.Request_Buffer ((This.EP, EP_Out), Report_Size);
       if This.Report_Buf = System.Null_Address then
-         raise Program_Error with "Cannot get EP for HID class";
+         return Not_Enough_EP_Buffer;
       end if;
 
       This.Interface_Index := Base_Interface_Index;
+
+      return Ok;
    end Initialize;
 
    --------------------

@@ -28,47 +28,66 @@
 --   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.   --
 --                                                                          --
 ------------------------------------------------------------------------------
+with HAL;
+with USB.HAL.Device;
 
-private package USB.Device.Control is
+package USB.Logging.Device is
 
-   procedure Setup (This : in out USB_Device_Stack;
-                    EP   : EP_Id);
-   --  Handle setup request
+   procedure Log (Evt : USB.HAL.Device.UDC_Event);
 
-   procedure Control_In (This : in out USB_Device_Stack);
-
-   procedure Control_Out (This : in out USB_Device_Stack;
-                          BCNT : UInt11);
-   --  FIXME: Is BCNT useful?
+   procedure Log_MIDI_Init;
+   procedure Log_MIDI_Config;
+   procedure Log_MIDI_Send;
+   procedure Log_MIDI_Receive;
+   procedure Log_MIDI_Out_TC;
+   procedure Log_MIDI_In_TC;
+   procedure Log_MIDI_Setup_TX;
+   procedure Log_MIDI_Setup_RX;
+   procedure Log_MIDI_RX_Discarded;
+   procedure Log_MIDI_TX_Discarded;
+   procedure Log_MIDI_Write_Packet;
 
 private
 
-   procedure Setup_Read (This : in out USB_Device_Stack);
-   --  Handle setup read request
+   type Log_Event_Kind is (None,
+                           UDC_Evt,
 
-   procedure Setup_Write (This : in out USB_Device_Stack);
-   --  Handle setup write request
+                           --  MIDI Class --
+                           MIDI_Init,
+                           MIDI_Config,
+                           MIDI_Send,
+                           MIDI_Receive,
+                           MIDI_Out_TC,
+                           MIDI_In_TC,
+                           MIDI_Setup_TX,
+                           MIDI_Setup_RX,
+                           MIDI_RX_Discarded,
+                           MIDI_TX_Discarded,
+                           MIDI_Write_Packet
+                          );
 
-   function Dispatch_Request (This : in out USB_Device_Stack)
-                              return Setup_Request_Answer;
+   type Log_Event_ID is new Standard.HAL.UInt16;
 
-   function Dispatch_Request_To_Class (This : in out USB_Device_Stack)
-                                       return Setup_Request_Answer;
+   type Log_Event (Kind : Log_Event_Kind := None) is record
+      ID : Log_Event_ID;
+      case Kind is
+         when UDC_Evt =>
+            UDC_Event : USB.HAL.Device.UDC_Event;
+         when others =>
+            null;
+      end case;
+   end record;
 
-   procedure Handle_Read_Request (This : in out USB_Device_Stack);
-   --  Handle setup read request
+   Event_Buffer_Size : constant := 256;
 
-   procedure Handle_Write_Request (This : in out USB_Device_Stack);
-   --  Handle setup write request
+   type Event_Index is mod Event_Buffer_Size;
 
-   function Device_Request (This : in out USB_Device_Stack)
-                            return Setup_Request_Answer;
+   Event_Buffer : array (Event_Index) of Log_Event :=
+     (others => (Kind  => None, ID => 0));
 
-   function Endpoint_Request (This : in out USB_Device_Stack)
-                              return Setup_Request_Answer;
+   Index : Event_Index := Event_Index'First;
+   ID    : Log_Event_ID;
 
-   procedure Send_Chunk (This : in out USB_Device_Stack);
+   procedure Log (Evt : Log_Event);
 
-   procedure Receive_Chunk (This : in out USB_Device_Stack);
-
-end USB.Device.Control;
+end USB.Logging.Device;

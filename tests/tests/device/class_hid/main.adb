@@ -33,7 +33,6 @@ procedure Main is
 
    RX_Data : aliased constant UInt8_Array := (1 .. 16 => 42);
 
-
    Configuration : aliased constant UInt8_Array := (0 .. 1 => 0);
 
    HID_Class : aliased USB.Device.HID.Default_HID_Class;
@@ -42,25 +41,32 @@ procedure Main is
                                       RX_Data'Unchecked_Access,
                                       Has_Early_Address => False,
                                       Max_Packet_Size   => 64,
-                                      EP_Buffers_Size   => 256);
-   Ctrl : USB.Device.USB_Device;
+                                      EP_Buffers_Size   => 256,
+                                      Number_Of_EPs     => 1);
+   Stack : USB.Device.USB_Device_Stack;
+   Result : USB.Device.Init_Result;
 
    S : Natural := 1;
 begin
 
-   Ctrl.Register_Class (HID_Class'Unchecked_Access);
+   Stack.Register_Class (HID_Class'Unchecked_Access);
 
-   Ctrl.Initialize
+
+   Result := Stack.Initialize
      (Controller      => UDC'Unchecked_Access,
       Manufacturer    => To_USB_String ("Manufacturer"),
       Product         => To_USB_String ("Product"),
       Serial_Number   => To_USB_String ("Serial"),
       Max_Packet_Size => 64);
 
-   Ctrl.Start;
+   if Result /= Ok then
+      raise Program_Error with "Stack init failed: " & Result'Img;
+   end if;
+
+   Stack.Start;
 
    loop
-      Ctrl.Poll;
+      Stack.Poll;
 
       if HID_Class.Ready then
          case S is

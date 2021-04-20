@@ -29,6 +29,8 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with Ada.Text_IO;
+
 with USB;
 with USB.Device;
 with USB.Device.MIDI;
@@ -53,18 +55,25 @@ package body USB_Testing.UDC_Scenarios is
                                          RX_Data'Unchecked_Access,
                                          Has_Early_Address => Early_Address,
                                          Max_Packet_Size   => 64,
-                                         EP_Buffers_Size   => 256);
-      Ctrl : USB.Device.USB_Device;
+                                         EP_Buffers_Size   => 256,
+                                         Number_Of_EPs     => 10);
+      Ctrl : USB.Device.USB_Device_Stack;
+      Result : USB.Device.Init_Result;
    begin
 
       Ctrl.Register_Class (Class'Unchecked_Access);
 
-      Ctrl.Initialize
+      Result := Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,
          Manufacturer    => To_USB_String ("Manufacturer"),
          Product         => To_USB_String ("Product"),
          Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
+
+      if Result /= Ok then
+         Ada.Text_IO.Put_Line ("USB STACK Init failed: " & Result'Img);
+         return;
+      end if;
 
       Ctrl.Start;
 
@@ -92,19 +101,26 @@ package body USB_Testing.UDC_Scenarios is
                                          RX_Data'Unchecked_Access,
                                          Has_Early_Address => False,
                                          Max_Packet_Size   => 64,
-                                         EP_Buffers_Size   => 256);
-      Ctrl : USB.Device.USB_Device;
+                                         EP_Buffers_Size   => 256,
+                                         Number_Of_EPs     => 10);
+      Ctrl : USB.Device.USB_Device_Stack;
+      Result : USB.Device.Init_Result;
    begin
 
       Ctrl.Register_Class (Class1'Unchecked_Access);
       Ctrl.Register_Class (Class2'Unchecked_Access);
 
-      Ctrl.Initialize
+      Result := Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,
          Manufacturer    => To_USB_String ("Manufacturer"),
          Product         => To_USB_String ("Product"),
          Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
+
+      if Result /= Ok then
+         Ada.Text_IO.Put_Line ("USB STACK Init failed: " & Result'Img);
+         return;
+      end if;
 
       Ctrl.Start;
 

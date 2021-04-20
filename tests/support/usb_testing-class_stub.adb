@@ -40,16 +40,19 @@ package body USB_Testing.Class_Stub is
    ----------------
 
    overriding
-   procedure Initialize (This            : in out Device_Class_Stub;
-                         Dev             : in out USB_Device;
-                         Interface_Index :        Class_Index)
+   function Initialize (This            : in out Device_Class_Stub;
+                        Dev             : in out USB_Device_Stack'Class;
+                        Interface_Index :        Class_Index)
+                        return Init_Result
    is
    begin
       if not Dev.Request_Endpoint (Bulk, This.EP) then
-         raise Program_Error with "Cannot get EP for stub class " &
-           This.Number'Img;
+         Put_Line ("Cannot get EP for stub class " & This.Number'Img);
+         return Not_Enough_EPs;
       end if;
       This.Interface_Index := Interface_Index;
+
+      return Ok;
    end Initialize;
 
    --------------------

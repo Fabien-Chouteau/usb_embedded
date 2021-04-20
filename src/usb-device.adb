@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2018, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -34,6 +34,8 @@ with System.Storage_Elements; use System.Storage_Elements;
 
 with USB.Device.Control;
 
+with USB.Logging.Device;
+
 package body USB.Device is
 
    procedure Put_Line (Str : String);
@@ -48,7 +50,7 @@ package body USB.Device is
    -- Stall_Control_EP --
    ----------------------
 
-   procedure Stall_Control_EP (This : in out USB_Device) is
+   procedure Stall_Control_EP (This : in out USB_Device_Stack) is
    begin
       This.UDC.EP_Stall ((0, EP_In));
       This.UDC.EP_Stall ((0, EP_Out));
@@ -59,7 +61,7 @@ package body USB.Device is
    -- Get_String --
    ----------------
 
-   function Get_String (This  : in out USB_Device;
+   function Get_String (This  : in out USB_Device_Stack;
                         Index : String_Id)
                         return Setup_Request_Answer
    is
@@ -101,7 +103,7 @@ package body USB.Device is
    -- Get_Descriptor --
    --------------------
 
-   function Get_Descriptor (This : in out USB_Device;
+   function Get_Descriptor (This : in out USB_Device_Stack;
                             Req  : Setup_Data)
                             return Setup_Request_Answer
    is
@@ -142,7 +144,7 @@ package body USB.Device is
    -- Set_Address --
    -----------------
 
-   function Set_Address (This : in out USB_Device;
+   function Set_Address (This : in out USB_Device_Stack;
                          Req  : Setup_Data)
                          return Setup_Request_Answer
    is
@@ -172,7 +174,7 @@ package body USB.Device is
    -- Set_Configuration --
    -----------------------
 
-   function Set_Configuration (This : in out USB_Device;
+   function Set_Configuration (This : in out USB_Device_Stack;
                                Req  : Setup_Data)
                                return Setup_Request_Answer
    is
@@ -194,14 +196,14 @@ package body USB.Device is
    -- Initialized --
    -----------------
 
-   function Initialized (This : USB_Device) return Boolean
+   function Initialized (This : USB_Device_Stack) return Boolean
    is (This.Is_Init);
 
    --------------------
    -- Register_Class --
    --------------------
 
-   procedure Register_Class (This  : in out USB_Device;
+   procedure Register_Class (This  : in out USB_Device_Stack;
                              Class : not null Any_USB_Device_Class)
    is
    begin
@@ -220,7 +222,7 @@ package body USB.Device is
    -- Request_Endpoint --
    ----------------------
 
-   function Request_Endpoint (This : in out USB_Device;
+   function Request_Endpoint (This : in out USB_Device_Stack;
                               Typ  :        EP_Type;
                               EP   : out EP_Id)
                               return Boolean
@@ -231,12 +233,17 @@ package body USB.Device is
       end if;
 
       for Id in EP_Id range 1 .. EP_Id'Last loop
-         if This.Endpoints (Id).Assigned_To = null then
+
+         if This.UDC.Valid_EP_Id (Id) -- Check if the EP exists on the UDC
+           and then
+            This.Endpoints (Id).Assigned_To = null -- Check if not already used
+         then
             EP := Id;
             This.Endpoints (Id).Assigned_To := This.Initializing;
             return True;
          end if;
       end loop;
+
       return False;
    end Request_Endpoint;
 
@@ -244,7 +251,7 @@ package body USB.Device is
    -- Request_Buffer --
    --------------------
 
-   function Request_Buffer (This : in out USB_Device;
+   function Request_Buffer (This : in out USB_Device_Stack;
                             EP   :        EP_Addr;
                             Len  :        UInt11)
                             return System.Address
@@ -261,7 +268,7 @@ package body USB.Device is
    -- Register_String --
    ---------------------
 
-   function Register_String (This : in out USB_Device;
+   function Register_String (This : in out USB_Device_Stack;
                              Str  : USB_String)
                              return String_Id
    is
@@ -297,17 +304,20 @@ package body USB.Device is
    -- Initalize --
    ---------------
 
-   procedure Initialize
-     (This            : in out USB_Device;
+   function Initialize
+     (This            : in out USB_Device_Stack;
       Controller      : not null Any_USB_Device_Controller;
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
       Max_Packet_Size : UInt8)
+      return Init_Result
    is
       Number_Of_Interfaces : UInt8;
       Unused : Natural;
       Interface_Id : UInt8 := 0;
+      Result : Init_Result;
+      Class : Any_USB_Device_Class;
    begin
 
       This.UDC := Controller;
@@ -321,8 +331,13 @@ package body USB.Device is
 
          This.Initializing := This.Classes (Index);
 
-         This.Classes (Index).Initialize (This, Interface_Id);
+         Class := This.Initializing;
+         Result := Class.Initialize (This, Interface_Id);
          Interface_Id := Interface_Id + Number_Of_Interfaces;
+
+         if Result /= Ok then
+            return Result;
+         end if;
 
       end loop;
 
@@ -336,13 +351,15 @@ package body USB.Device is
       This.Max_Packet_Size := Max_Packet_Size;
 
       This.Is_Init := True;
+
+      return Ok;
    end Initialize;
 
    -----------
    -- Start --
    -----------
 
-   procedure Start (This : in out USB_Device) is
+   procedure Start (This : in out USB_Device_Stack) is
    begin
       This.UDC.Initialize; --  This should actually init
       This.UDC.Start;
@@ -352,7 +369,7 @@ package body USB.Device is
    -- Reset --
    -----------
 
-   procedure Reset (This : in out USB_Device) is
+   procedure Reset (This : in out USB_Device_Stack) is
    begin
       This.UDC.EP_Setup ((0, EP_In), USB.Control,
                          UInt16 (This.Max_Packet_Size));
@@ -373,7 +390,7 @@ package body USB.Device is
    -- Transfer_Complete --
    -----------------------
 
-   procedure Transfer_Complete (This : in out USB_Device;
+   procedure Transfer_Complete (This : in out USB_Device_Stack;
                                 EP   :        EP_Addr;
                                 CNT  :        UInt11)
    is
@@ -396,7 +413,7 @@ package body USB.Device is
    -- Build_Device_Descriptor --
    -----------------------------
 
-   procedure Build_Device_Descriptor (This : in out USB_Device) is
+   procedure Build_Device_Descriptor (This : in out USB_Device_Stack) is
       Desc : Device_Descriptor
         with Address => This.Ctrl.RX_Buf'Address;
    begin
@@ -425,7 +442,7 @@ package body USB.Device is
    -- Build_Device_Qualifier --
    ----------------------------
 
-   procedure Build_Device_Qualifier (This : in out USB_Device) is
+   procedure Build_Device_Qualifier (This : in out USB_Device_Stack) is
       Desc : Device_Qualifier
         with Address => This.Ctrl.RX_Buf'Address;
    begin
@@ -447,7 +464,7 @@ package body USB.Device is
    -- Build_Config_Descriptor --
    -----------------------------
 
-   procedure Build_Config_Descriptor (This : in out USB_Device) is
+   procedure Build_Config_Descriptor (This : in out USB_Device_Stack) is
       Total_Length : Natural;
       Len : Natural;
       First : constant Natural := This.Ctrl.RX_Buf'First;
@@ -515,13 +532,17 @@ package body USB.Device is
    -- Poll --
    ----------
 
-   procedure Poll (This : in out USB_Device) is
+   procedure Poll (This : in out USB_Device_Stack) is
    begin
 
       loop
          declare
             Evt : constant UDC_Event := This.UDC.Poll;
          begin
+
+            if Logs_Enabled and then Evt.Kind /= None then
+               USB.Logging.Device.Log (Evt);
+            end if;
 
             case Evt.Kind is
             when Reset =>
@@ -546,7 +567,7 @@ package body USB.Device is
    -- Controller --
    ----------------
 
-   function Controller (This : USB_Device)
+   function Controller (This : USB_Device_Stack)
                         return not null Any_USB_Device_Controller
    is (This.UDC);
 
