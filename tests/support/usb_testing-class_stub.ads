@@ -48,13 +48,13 @@ package USB_Testing.Class_Stub is
    overriding
    function Initialize (This            : in out Device_Class_Stub;
                         Dev             : in out USB_Device_Stack'Class;
-                        Interface_Index :        Class_Index)
+                        Interface_Index :        USB.Interface_Id)
                         return Init_Result;
 
    overriding
    procedure Get_Class_Info
      (This                     : in out Device_Class_Stub;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out USB.Interface_Id;
       Config_Descriptor_Length :    out Natural);
 
    overriding
@@ -90,7 +90,7 @@ private
 
    type Device_Class_Stub (Number : Positive)
    is new USB.Device.USB_Device_Class with record
-      Interface_Index : Class_Index;
+      Interface_Index : USB.Interface_Id;
       Ep : USB.EP_Id;
    end record;
 

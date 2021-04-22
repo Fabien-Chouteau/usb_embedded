@@ -88,7 +88,7 @@ private
 
    type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
    is limited new USB_Device_Class with record
-      Interface_Index : Class_Index;
+      Interface_Index : Interface_Id;
       Int_EP          : USB.EP_Id;
       Bulk_EP         : USB.EP_Id;
       Iface_Str       : USB.String_Id;
@@ -115,13 +115,13 @@ private
    overriding
    function Initialize (This                 : in out Default_Serial_Class;
                         Dev                  : in out USB_Device_Stack'Class;
-                        Base_Interface_Index :        Class_Index)
+                        Base_Interface_Index :        Interface_Id)
                         return Init_Result;
 
    overriding
    procedure Get_Class_Info
      (This                     : in out Default_Serial_Class;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out Interface_Id;
       Config_Descriptor_Length :    out Natural);
 
    overriding

@@ -181,9 +181,9 @@ package body USB.Device is
       Answer : Setup_Request_Answer := Handled;
    begin
 
-      for Index in Class_Index loop
-         exit when This.Classes (Index) = null;
-         Answer := This.Classes (Index).Configure (This.UDC.all, Req.Value);
+      for Class of This.Classes loop
+         exit when Class.Ptr = null;
+         Answer := Class.Ptr.Configure (This.UDC.all, Req.Value);
          exit when Answer /= Handled;
       end loop;
 
@@ -203,19 +203,20 @@ package body USB.Device is
    -- Register_Class --
    --------------------
 
-   procedure Register_Class (This  : in out USB_Device_Stack;
-                             Class : not null Any_USB_Device_Class)
+   function Register_Class (This  : in out USB_Device_Stack;
+                            Class : not null Any_USB_Device_Class)
+                            return Boolean
    is
    begin
 
-      for Index in Class_Index loop
-         if This.Classes (Index) = null then
-            This.Classes (Index) := Class;
-            return;
+      for Class_I of This.Classes loop
+         if Class_I.Ptr = null then
+            Class_I.Ptr := Class;
+            return True;
          end if;
       end loop;
 
-      raise Program_Error with "Max classes limit reached";
+      return False;
    end Register_Class;
 
    ----------------------
@@ -313,32 +314,37 @@ package body USB.Device is
       Max_Packet_Size : UInt8)
       return Init_Result
    is
-      Number_Of_Interfaces : UInt8;
+      Number_Of_Interfaces : Interface_Id;
       Unused : Natural;
-      Interface_Id : UInt8 := 0;
+      Iface_Id : Interface_Id := 0;
       Result : Init_Result;
-      Class : Any_USB_Device_Class;
    begin
 
       This.UDC := Controller;
 
-      for Index in Class_Index loop
-         exit when This.Classes (Index) = null;
+      for Class of This.Classes loop
+         exit when Class.Ptr = null;
 
-         This.Classes (Index).Get_Class_Info
+         Class.Ptr.Get_Class_Info
            (Number_Of_Interfaces     => Number_Of_Interfaces,
             Config_Descriptor_Length => Unused);
 
-         This.Initializing := This.Classes (Index);
+         --  Mark which class we are initializing
+         This.Initializing := Class.Ptr;
 
-         Class := This.Initializing;
-         Result := Class.Initialize (This, Interface_Id);
-         Interface_Id := Interface_Id + Number_Of_Interfaces;
+         --  Initialize the class
+         Result := Class.Ptr.Initialize (This, Iface_Id);
 
          if Result /= Ok then
             return Result;
          end if;
 
+         --  Record the range of interface for this class:
+         Class.First_Iface := Iface_Id;
+         Class.Last_Iface := Iface_Id + Number_Of_Interfaces - 1;
+
+         --  Move interface index for the next class
+         Iface_Id := Iface_Id + Number_Of_Interfaces;
       end loop;
 
       This.Initializing := null;
@@ -468,16 +474,16 @@ package body USB.Device is
       Total_Length : Natural;
       Len : Natural;
       First : constant Natural := This.Ctrl.RX_Buf'First;
-      Number_Of_Interfaces : UInt8 := 0;
-      Total_Number_Of_Interfaces : UInt8 := 0;
+      Number_Of_Interfaces : Interface_Id := 0;
+      Total_Number_Of_Interfaces : Interface_Id := 0;
    begin
       Total_Length := 9; -- Size of configuration descriptor
 
-      for Index in Class_Index loop
-         exit when This.Classes (Index) = null;
+      for Class of This.Classes loop
+         exit when Class.Ptr = null;
 
-         This.Classes (Index).Get_Class_Info (Number_Of_Interfaces,
-                                             Config_Descriptor_Length =>  Len);
+         Class.Ptr.Get_Class_Info (Number_Of_Interfaces,
+                                   Config_Descriptor_Length => Len);
 
          if Total_Length + Len > This.Ctrl.RX_Buf'Length then
             raise Program_Error with "Not enought space in control buffer" &
@@ -488,8 +494,7 @@ package body USB.Device is
             From  : constant Natural := First + Total_Length;
             To    : constant Natural := From + Len - 1;
          begin
-            This.Classes (Index).Fill_Config_Descriptor
-              (This.Ctrl.RX_Buf (From .. To));
+            Class.Ptr.Fill_Config_Descriptor (This.Ctrl.RX_Buf (From .. To));
          end;
 
          Total_Length := Total_Length + Len;
@@ -515,7 +520,7 @@ package body USB.Device is
             9, --  sizeof(usbDescrConfig): length of descriptor in bytes
             USB_DESC_TYPE_CONFIGURATION, --  descriptor type
             Len_Low, Len_High, --  total length of data returned
-            Total_Number_Of_Interfaces, --  interfaces in this configuration
+            UInt8 (Total_Number_Of_Interfaces), -- Ifaces in this configuration
             1, --  index of this configuration
             0, --  configuration name string index
             Shift_Left (1, 7), --  attributes

@@ -43,14 +43,15 @@ procedure Main is
                                       Max_Packet_Size   => 64,
                                       EP_Buffers_Size   => 256,
                                       Number_Of_EPs     => 1);
-   Stack : USB.Device.USB_Device_Stack;
+   Stack : USB.Device.USB_Device_Stack (Max_Classes => 1);
    Result : USB.Device.Init_Result;
 
    S : Natural := 1;
 begin
 
-   Stack.Register_Class (HID_Class'Unchecked_Access);
-
+   if not Stack.Register_Class (HID_Class'Unchecked_Access) then
+      raise Program_Error with "Register class failed";
+   end if;
 
    Result := Stack.Initialize
      (Controller      => UDC'Unchecked_Access,

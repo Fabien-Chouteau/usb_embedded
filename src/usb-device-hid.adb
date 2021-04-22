@@ -73,7 +73,7 @@ package body USB.Device.HID is
    overriding
    function Initialize (This                 : in out Default_HID_Class;
                         Dev                  : in out USB_Device_Stack'Class;
-                        Base_Interface_Index :        Class_Index)
+                        Base_Interface_Index :        Interface_Id)
                         return Init_Result
    is
    begin
@@ -98,7 +98,7 @@ package body USB.Device.HID is
    overriding
    procedure Get_Class_Info
      (This                     : in out Default_HID_Class;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out Interface_Id;
       Config_Descriptor_Length :    out Natural)
    is
       pragma Unreferenced (This);

@@ -41,13 +41,15 @@ package USB.Device is
 
    -- Device Stack --
 
-   type USB_Device_Stack is tagged private;
+   type USB_Device_Stack (Max_Classes : Class_Index) is tagged private;
 
    function Initialized (This : USB_Device_Stack) return Boolean;
 
-   procedure Register_Class (This  : in out USB_Device_Stack;
-                             Class : not null Any_USB_Device_Class)
-   with Pre => not This.Initialized;
+   function Register_Class (This  : in out USB_Device_Stack;
+                            Class : not null Any_USB_Device_Class)
+                            return Boolean
+     with Pre => not This.Initialized;
+   --  Return False if there is not space left to register the class
 
    function Request_Endpoint (This : in out USB_Device_Stack;
                               Typ  :        EP_Type;
@@ -109,12 +111,12 @@ package USB.Device is
 
    function Initialize (This                 : in out USB_Device_Class;
                         Dev                  : in out USB_Device_Stack'Class;
-                        Base_Interface_Index :        Class_Index)
+                        Base_Interface_Index :        Interface_Id)
                         return Init_Result
    is abstract;
 
    procedure Get_Class_Info (This                     : in out USB_Device_Class;
-                             Number_Of_Interfaces     :    out UInt8;
+                             Number_Of_Interfaces     :    out Interface_Id;
                              Config_Descriptor_Length :    out Natural)
    is abstract;
 
@@ -175,7 +177,12 @@ private
       Need_ZLP : Boolean := False;
    end record;
 
-   type Class_Array is array (Class_Index) of Any_USB_Device_Class;
+   type Class_Info is record
+      Ptr : Any_USB_Device_Class := null;
+      First_Iface : Interface_Id := Interface_Id'Last;
+      Last_Iface  : Interface_Id := Interface_Id'First;
+   end record;
+   type Class_Array is array (Class_Index range <>) of Class_Info;
 
    type Endpoint_Status is record
       Assigned_To : Any_USB_Device_Class := null;
@@ -190,7 +197,8 @@ private
    type String_Info_Array
    is array (String_Id range 1 .. Max_Strings) of String_Info;
 
-   type USB_Device_Stack is tagged record
+   type USB_Device_Stack (Max_Classes : Class_Index)
+   is tagged record
 
       Ctrl : Control_Machine;
 
@@ -198,7 +206,7 @@ private
 
       Is_Init : Boolean := False;
       UDC     : Any_USB_Device_Controller := null;
-      Classes : Class_Array := (others => null);
+      Classes : Class_Array (1 .. Max_Classes);
       Endpoints : Endpoint_Status_Array;
 
       Dev_Addr  : UInt7 := 0;

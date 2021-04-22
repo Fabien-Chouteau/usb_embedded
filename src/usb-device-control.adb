@@ -64,10 +64,18 @@ package body USB.Device.Control is
       Req : Setup_Data renames This.Ctrl.Req;
    begin
 
-      if This.Ctrl.State /= Idle then
+      if This.Ctrl.State not in
+        Idle |
+
+         --  We accept the Status_Out state here because some UDC (samdx1) will
+         --  skip the control ZLP OUT if a new setup request is recived.
+        Status_Out
+      then
          raise Program_Error with "Not expecting setup in '" &
            This.Ctrl.State'Img & "' control state";
       end if;
+
+      This.Ctrl.State := Idle;
 
       This.UDC.EP_Ready_For_Data (EP, System.Null_Address, 0, False);
 
@@ -319,39 +327,47 @@ package body USB.Device.Control is
 
       Res : Setup_Request_Answer;
    begin
-      for Index in Class_Index loop
+      for Class of This.Classes loop
 
-         exit when This.Classes (Index) = null;
+         exit when Class .Ptr = null;
 
-         if Req.RType.Dir = Device_To_Host then
+         if Req.RType.Recipient /= Iface
+           or else
 
-            Res := This.Classes (Index).Setup_Read_Request (Req,
-                                                            This.Ctrl.Buf,
-                                                            This.Ctrl.Len);
+         --  Check to dispatch an interface request to the right class
+           (Interface_Id (Req.Index)
+            in Class.First_Iface .. Class.Last_Iface)
+         then
 
-            if Res = Handled and then This.Ctrl.Len /= 0 then
+            if Req.RType.Dir = Device_To_Host then
 
-               --  Copy the buffer provided by the class in the control buffer,
-               --  this ensures that the data is in RAM as required by some UDC
-               --  with internal DMA (samd51).
+               Res := Class.Ptr.Setup_Read_Request
+                 (Req, This.Ctrl.Buf, This.Ctrl.Len);
 
-               if This.Ctrl.Len > This.Ctrl.RX_Buf'Length then
-                  raise Program_Error
-                    with "Control buffer too small for class control data";
+               if Res = Handled and then This.Ctrl.Len /= 0 then
+
+                  --  Copy the buffer provided by the class in the control
+                     --  buffer, this ensures that the data is in RAM as
+                     --  required by some UDC with internal DMA (samd51).
+
+                  if This.Ctrl.Len > This.Ctrl.RX_Buf'Length then
+                     raise Program_Error
+                       with "Control buffer too small for class control data";
+                  end if;
+
+                  declare
+                     Src : UInt8_Array (1 .. Natural (This.Ctrl.Len))
+                       with Address => This.Ctrl.Buf;
+                  begin
+                     This.Ctrl.RX_Buf (1 .. Natural (This.Ctrl.Len)) := Src;
+                     This.Ctrl.Buf := This.Ctrl.RX_Buf'Address;
+                  end;
                end if;
-
-               declare
-                  Src : UInt8_Array (1 .. Natural (This.Ctrl.Len))
-                    with Address => This.Ctrl.Buf;
-               begin
-                  This.Ctrl.RX_Buf (1 .. Natural (This.Ctrl.Len)) := Src;
-                  This.Ctrl.Buf := This.Ctrl.RX_Buf'Address;
-               end;
+               return Res;
+            else
+               return Class.Ptr.Setup_Write_Request
+                 (Req, This.Ctrl.RX_Buf (1 .. Natural (Req.Length)));
             end if;
-            return Res;
-         else
-            return This.Classes (Index).Setup_Write_Request
-              (Req, This.Ctrl.RX_Buf (1 .. Natural (Req.Length)));
          end if;
       end loop;
 
@@ -371,8 +387,6 @@ package body USB.Device.Control is
       if Verbose then
          Put_Line ("Control_Dispatch_Request");
       end if;
-
-      --  TODO: User callbacks...
 
       --  Standard handling
 

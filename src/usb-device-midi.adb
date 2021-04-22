@@ -175,7 +175,7 @@ package body USB.Device.MIDI is
    overriding
    function Initialize (This                 : in out Default_MIDI_Class;
                         Dev                  : in out USB_Device_Stack'Class;
-                        Base_Interface_Index :        Class_Index)
+                        Base_Interface_Index :        Interface_Id)
                         return Init_Result
    is
    begin
@@ -212,7 +212,7 @@ package body USB.Device.MIDI is
    overriding
    procedure Get_Class_Info
      (This                     : in out Default_MIDI_Class;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out Interface_Id;
       Config_Descriptor_Length :    out Natural)
    is
       pragma Unreferenced (This);
@@ -245,7 +245,7 @@ package body USB.Device.MIDI is
       Data (F + 0 .. F + 91) :=
         (9, --  sizeof(usbDescrInterface): length of descriptor in bytes
          USB_DESC_TYPE_INTERFACE, --  descriptor type
-         This.Interface_Index, --  index of this interface
+         UInt8 (This.Interface_Index), --  index of this interface
          0, --  alternate setting for this interface
          0, --  endpoints excl 0: number of endpoint descriptors to follow
          1, --  Class audio
@@ -275,7 +275,7 @@ package body USB.Device.MIDI is
          --  descriptor follows inline: */
          9, --  length of descriptor in bytes */
          USB_DESC_TYPE_INTERFACE, --  descriptor type */
-         This.Interface_Index + 1, --  index of this interface */
+         UInt8 (This.Interface_Index + 1), --  index of this interface */
          0, --  alternate setting for this interface */
          2, --  endpoints excl 0: number of endpoint descriptors to follow */
          1, --  AUDIO */

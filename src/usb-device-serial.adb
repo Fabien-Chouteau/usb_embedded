@@ -48,7 +48,7 @@ package body USB.Device.Serial is
    overriding
    function Initialize (This                 : in out Default_Serial_Class;
                         Dev                  : in out USB_Device_Stack'Class;
-                        Base_Interface_Index :        Class_Index)
+                        Base_Interface_Index :        Interface_Id)
                         return Init_Result
    is
    begin
@@ -106,7 +106,7 @@ package body USB.Device.Serial is
    overriding
    procedure Get_Class_Info
      (This                     : in out Default_Serial_Class;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out Interface_Id;
       Config_Descriptor_Length :    out Natural)
    is
       pragma Unreferenced (This);
@@ -141,7 +141,7 @@ package body USB.Device.Serial is
          -- Interface Associate --
          8, -- bLength
          16#0B#, -- bDescriptorType 0x0B
-         This.Interface_Index, -- bFirstInterface
+         UInt8 (This.Interface_Index), -- bFirstInterface
          2, -- bInterfaceCount
          USB_CLASS_CDC, -- bFunctionClass
          CDC_COMM_SUBCLASS_ABSTRACT_CONTROL_MODEL, -- bFunctionSubClass
@@ -151,7 +151,7 @@ package body USB.Device.Serial is
          -- CDC Control Interface --
          9, -- bLength
          USB_DESC_TYPE_INTERFACE, -- bDescriptorType
-         This.Interface_Index, -- bInterfaceNumber
+         UInt8 (This.Interface_Index), -- bInterfaceNumber
          0, -- bAlternateSetting
          1, -- bNumEndpoints
          USB_CLASS_CDC, -- bInterfaceClass
@@ -171,7 +171,7 @@ package body USB.Device.Serial is
          USB_DESC_CS_INTERFACE,
          CDC_FUNC_DESC_CALL_MANAGEMENT,
          0,
-         This.Interface_Index + 1,
+         UInt8 (This.Interface_Index + 1),
 
          -- CDC ACM: support line request --
          4,
@@ -183,8 +183,8 @@ package body USB.Device.Serial is
          5,
          USB_DESC_CS_INTERFACE,
          CDC_FUNC_DESC_UNION,
-         This.Interface_Index,
-         This.Interface_Index + 1,
+         UInt8 (This.Interface_Index),
+         UInt8 (This.Interface_Index + 1),
 
          -- Endpoint Notification --
          7,
@@ -197,7 +197,7 @@ package body USB.Device.Serial is
          -- CDC Control Interface --
          9, -- bLength
          USB_DESC_TYPE_INTERFACE, -- bDescriptorType
-         This.Interface_Index + 1, -- bInterfaceNumber
+         UInt8 (This.Interface_Index + 1), -- bInterfaceNumber
          0, -- bAlternateSetting
          2, -- bNumEndpoints
          USB_CLASS_CDC_DATA, -- bInterfaceClass

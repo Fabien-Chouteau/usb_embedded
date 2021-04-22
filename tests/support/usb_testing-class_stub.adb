@@ -42,7 +42,7 @@ package body USB_Testing.Class_Stub is
    overriding
    function Initialize (This            : in out Device_Class_Stub;
                         Dev             : in out USB_Device_Stack'Class;
-                        Interface_Index :        Class_Index)
+                        Interface_Index :        Interface_Id)
                         return Init_Result
    is
    begin
@@ -50,7 +50,7 @@ package body USB_Testing.Class_Stub is
          Put_Line ("Cannot get EP for stub class " & This.Number'Img);
          return Not_Enough_EPs;
       end if;
-      This.Interface_Index := Interface_Index;
+      This.Interface_Index :=  Interface_Index;
 
       return Ok;
    end Initialize;
@@ -62,7 +62,7 @@ package body USB_Testing.Class_Stub is
    overriding
    procedure Get_Class_Info
      (This                     : in out Device_Class_Stub;
-      Number_Of_Interfaces     :    out UInt8;
+      Number_Of_Interfaces     :    out Interface_Id;
       Config_Descriptor_Length :    out Natural)
    is
    begin
@@ -80,7 +80,7 @@ package body USB_Testing.Class_Stub is
    is
       pragma Unreferenced (Data);
    begin
-      Data := (others => This.Interface_Index);
+      Data := (others => UInt8 (This.Interface_Index));
    end Fill_Config_Descriptor;
 
    ---------------

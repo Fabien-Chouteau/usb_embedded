@@ -57,11 +57,13 @@ package body USB_Testing.UDC_Scenarios is
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,
                                          Number_Of_EPs     => 10);
-      Ctrl : USB.Device.USB_Device_Stack;
+      Ctrl : USB.Device.USB_Device_Stack (Max_Classes => 1);
       Result : USB.Device.Init_Result;
    begin
 
-      Ctrl.Register_Class (Class'Unchecked_Access);
+      if not Ctrl.Register_Class (Class'Unchecked_Access) then
+         Ada.Text_IO.Put_Line ("USB STACK register class failed");
+      end if;
 
       Result := Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,
@@ -103,12 +105,16 @@ package body USB_Testing.UDC_Scenarios is
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,
                                          Number_Of_EPs     => 10);
-      Ctrl : USB.Device.USB_Device_Stack;
+      Ctrl : USB.Device.USB_Device_Stack (Max_Classes => 2);
       Result : USB.Device.Init_Result;
    begin
 
-      Ctrl.Register_Class (Class1'Unchecked_Access);
-      Ctrl.Register_Class (Class2'Unchecked_Access);
+      if not Ctrl.Register_Class (Class1'Unchecked_Access) then
+         Ada.Text_IO.Put_Line ("USB STACK register class1 failed");
+      end if;
+      if not Ctrl.Register_Class (Class2'Unchecked_Access) then
+         Ada.Text_IO.Put_Line ("USB STACK register class2 failed");
+      end if;
 
       Result := Ctrl.Initialize
         (Controller      => UDC'Unchecked_Access,

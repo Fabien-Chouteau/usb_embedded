@@ -100,6 +100,7 @@ package USB is
    Invalid_String_Id : constant String_Id := 0;
 
    type Lang_ID is new UInt16;
+   type Interface_Id is new UInt8;
 
    type Device_Descriptor is record
       bLength            : UInt8;

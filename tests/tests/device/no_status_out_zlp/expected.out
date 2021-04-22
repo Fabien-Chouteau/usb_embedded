@@ -1,0 +1,12 @@
+UDC Initialize
+UDC Start
+UDC Verbose off
+UDC Verbose on
+UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 256 Index: 0 Len: 64
+UDC EP_Ready_For_Data [EP_OUT 0] FALSE
+UDC EP_Write_Packet [EP_IN 0] 18 bytes
+0000_0000_0000_0000: 12 01 10 01 00 00 00 40 66 66 42 42 21 01 01 02 .......@ffBB!...
+0000_0000_0000_0010: 03 01                                           ..
+UDC Poll -> TRANSFER_COMPLETE [EP_IN 0] BCNT: 18
+UDC EP_Ready_For_Data [EP_OUT 0] TRUE
+UDC Poll -> NONE
