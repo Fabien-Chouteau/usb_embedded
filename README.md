@@ -2,7 +2,7 @@
 An Ada USB stack for embedded devices
 
 This project and its design are inspired by the USB device stack of the
-[libopencm3 project](https://github.com/libopencm3/libopencm3) and the
+[libopencm3 project](https://github.com/libopencm3/libopencm3) and
 [TinyUSB](https://github.com/hathach/tinyusb).
 
 # How to use the USB Embedded Device Stack:
@@ -50,7 +50,7 @@ There are 4 major steps in the USB Device stack initialization process:
     - Setting up IO pins
     - Setting up clocks
     - Setting up Direct Memory Access (DMA)
-  Please follow the documentation the of HAL/BSP for your microcontroller.
+   Please follow the documentation the of HAL/BSP for your microcontroller.
 
  - Register classes: This is when the application decides what features will be
    provided by the USB Device. It can be serial, HID (mouse/keyboard), both or
