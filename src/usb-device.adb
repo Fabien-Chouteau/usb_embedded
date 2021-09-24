@@ -369,6 +369,10 @@ package body USB.Device is
    begin
       This.UDC.Initialize; --  This should actually init
       This.UDC.Start;
+
+      while This.Dev_State /= Configured loop
+         This.Poll;
+      end loop;
    end Start;
 
    -----------
