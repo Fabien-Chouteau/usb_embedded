@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,39 +29,91 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL;
+package body USB.Device.HID.Keyboard is
 
-package USB.Utils is
+   ------------------
+   -- Set_Modifier --
+   ------------------
 
-   function High (V : UInt16) return UInt8
-   is (UInt8 (Shift_Right (V, 8) and 16#FF#));
+   procedure Set_Modifier (This  : in out Instance;
+                           M     : Modifiers;
+                           Value : Boolean := True)
+   is
+      Mods : UInt8 renames This.Report (This.Report'First);
+   begin
+      if Value then
+         Mods := Mods or M'Enum_Rep;
+      else
+         Mods := Mods and (not M'Enum_Rep);
+      end if;
+   end Set_Modifier;
 
-   function Low (V : UInt16) return UInt8
-   is (UInt8 (V and 16#FF#));
+   --------------------
+   -- Key_Codes_Full --
+   --------------------
 
-   procedure Copy (Src, Dst : System.Address; Count : Natural);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   function Key_Codes_Full (This : Instance) return Boolean
+   is (This.Key_Code_Index = Max_Key_Codes);
 
-   pragma Inline (Copy);
+   -------------------
+   -- Push_Key_Code --
+   -------------------
 
-   --  Basic_RAM_Allocator --
+   procedure Push_Key_Code (This : in out Instance;
+                            Code : UInt8)
+   is
+   begin
+      if This.Key_Codes_Full then
+         return;
+      end if;
 
-   type Basic_RAM_Allocator (Size : Positive) is private;
+      This.Report (This.Report'First + 2 + This.Key_Code_Index) := Code;
+      This.Key_Code_Index := This.Key_Code_Index + 1;
+   end Push_Key_Code;
 
-   function Allocate (This      : in out Basic_RAM_Allocator;
-                      Alignment :        UInt8;
-                      Len       :        UInt11)
-                      return System.Address;
+   -----------
+   -- Is_On --
+   -----------
 
-private
+   function Is_On (This : Instance; L : LEDs) return Boolean
+   is ((This.LEDs and L'Enum_Rep) /= 0);
 
-   type Basic_RAM_Allocator (Size : Positive) is record
-      Buffer : UInt8_Array (1 .. Size);
-      Top : Natural := 1;
-   end record;
+   -----------------
+   -- Send_Report --
+   -----------------
 
-   procedure Align_Top (This      : in out Basic_RAM_Allocator;
-                        Alignment :        UInt8);
+   overriding
+   procedure Send_Report (This : in out Instance;
+                          UDC  : in out USB_Device_Controller'Class)
+   is
+   begin
+      Parent (This).Send_Report (UDC);
 
-end USB.Utils;
+      This.Key_Code_Index := 0;
+   end Send_Report;
+
+   ----------------
+   -- Set_Report --
+   ----------------
+
+   overriding
+   function Set_Report (This : in out Instance;
+                        Typ  :        UInt8;
+                        ID   :        UInt8;
+                        Data :        UInt8_Array)
+                        return Setup_Request_Answer
+   is
+   begin
+      if Data'Length /= 1
+        or else
+          Typ /= 2
+        or else
+          ID /= 0
+      then
+         return Not_Supported;
+      end if;
+
+      This.LEDs := Data (Data'First);
+      return Handled;
+   end Set_Report;
+end USB.Device.HID.Keyboard;

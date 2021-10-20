@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,39 +29,35 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL;
+with Ada.Unchecked_Conversion;
 
-package USB.Utils is
+package body USB.Device.HID.Mouse is
 
-   function High (V : UInt16) return UInt8
-   is (UInt8 (Shift_Right (V, 8) and 16#FF#));
+   --------------
+   -- Set_Move --
+   --------------
 
-   function Low (V : UInt16) return UInt8
-   is (UInt8 (V and 16#FF#));
+   procedure Set_Move (This : in out Instance;
+                       X, Y : Interfaces.Integer_8)
+   is
+      function To_UInt8 is new Ada.Unchecked_Conversion (Interfaces.Integer_8,
+                                                         UInt8);
+   begin
+      This.Report (2) := To_UInt8 (X);
+      This.Report (3) := To_UInt8 (Y);
+   end Set_Move;
 
-   procedure Copy (Src, Dst : System.Address; Count : Natural);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   ---------------
+   -- Set_Click --
+   ---------------
 
-   pragma Inline (Copy);
+   procedure Set_Click (This : in out Instance;
+                        Btn1, Btn2, Btn3 : Boolean := False)
+   is
+   begin
+      This.Report (1) := (if Btn1 then 1 else 0) or
+                         (if Btn2 then 2 else 0) or
+                         (if Btn3 then 4 else 0);
+   end Set_Click;
 
-   --  Basic_RAM_Allocator --
-
-   type Basic_RAM_Allocator (Size : Positive) is private;
-
-   function Allocate (This      : in out Basic_RAM_Allocator;
-                      Alignment :        UInt8;
-                      Len       :        UInt11)
-                      return System.Address;
-
-private
-
-   type Basic_RAM_Allocator (Size : Positive) is record
-      Buffer : UInt8_Array (1 .. Size);
-      Top : Natural := 1;
-   end record;
-
-   procedure Align_Top (This      : in out Basic_RAM_Allocator;
-                        Alignment :        UInt8);
-
-end USB.Utils;
+end USB.Device.HID.Mouse;

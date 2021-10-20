@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,39 +29,64 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL;
+with Interfaces;
 
-package USB.Utils is
+package USB.Device.HID.Mouse is
 
-   function High (V : UInt16) return UInt8
-   is (UInt8 (Shift_Right (V, 8) and 16#FF#));
+   Mouse_Report_Size : constant := 3;
 
-   function Low (V : UInt16) return UInt8
-   is (UInt8 (V and 16#FF#));
+   type Instance
+   is new Abstract_HID_Class (Mouse_Report_Size)
+   with private;
 
-   procedure Copy (Src, Dst : System.Address; Count : Natural);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   procedure Set_Move (This : in out Instance;
+                       X, Y : Interfaces.Integer_8);
+   --  Set the relative movement of the mouse cursor
 
-   pragma Inline (Copy);
-
-   --  Basic_RAM_Allocator --
-
-   type Basic_RAM_Allocator (Size : Positive) is private;
-
-   function Allocate (This      : in out Basic_RAM_Allocator;
-                      Alignment :        UInt8;
-                      Len       :        UInt11)
-                      return System.Address;
+   procedure Set_Click (This : in out Instance;
+                        Btn1, Btn2, Btn3 : Boolean := False);
+   --  Set the mouse buttons state
 
 private
 
-   type Basic_RAM_Allocator (Size : Positive) is record
-      Buffer : UInt8_Array (1 .. Size);
-      Top : Natural := 1;
-   end record;
+   type Instance
+   is new Abstract_HID_Class (Mouse_Report_Size)
+   with null record;
 
-   procedure Align_Top (This      : in out Basic_RAM_Allocator;
-                        Alignment :        UInt8);
+   HID_Mouse_Report_Desc : aliased constant UInt8_Array :=
+     (
+      --  https://eleccelerator.com/tutorial-about-usb-hid-report-descriptors/
+      16#05#, 16#01#, --  USAGE_PAGE (Generic Desktop)
+      16#09#, 16#02#, --  USAGE (Mouse)
+      16#a1#, 16#01#, --  COLLECTION (Application)
+      16#09#, 16#01#, --    USAGE (Pointer)
+      16#a1#, 16#00#, --    COLLECTION (Physical)
+      16#05#, 16#09#, --      USAGE_PAGE (Button)
+      16#19#, 16#01#, --      USAGE_MINIMUM (Button 1)
+      16#29#, 16#03#, --      USAGE_MAXIMUM (Button 3)
+      16#15#, 16#00#, --      LOGICAL_MINIMUM (0)
+      16#25#, 16#01#, --      LOGICAL_MAXIMUM (1)
+      16#95#, 16#03#, --      REPORT_COUNT (3)
+      16#75#, 16#01#, --      REPORT_SIZE (1)
+      16#81#, 16#02#, --      INPUT (Data,Var,Abs)
+      16#95#, 16#01#, --      REPORT_COUNT (1)
+      16#75#, 16#05#, --      REPORT_SIZE (5)
+      16#81#, 16#03#, --      INPUT (Cnst,Var,Abs)
+      16#05#, 16#01#, --      USAGE_PAGE (Generic Desktop)
+      16#09#, 16#30#, --      USAGE (X)
+      16#09#, 16#31#, --      USAGE (Y)
+      16#15#, 16#81#, --      LOGICAL_MINIMUM (-127)
+      16#25#, 16#7f#, --      LOGICAL_MAXIMUM (127)
+      16#75#, 16#08#, --      REPORT_SIZE (8)
+      16#95#, 16#02#, --      REPORT_COUNT (2)
+      16#81#, 16#06#, --      INPUT (Data,Var,Rel)
+      16#c0#,         --    END_COLLECTION
+      16#c0#          --  END_COLLECTION
+     );
 
-end USB.Utils;
+   overriding
+   function Report_Descriptor (This : Instance)
+                               return not null Report_Descriptor_Access
+   is (HID_Mouse_Report_Desc'Access);
+
+end USB.Device.HID.Mouse;

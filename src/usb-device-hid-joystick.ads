@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,39 +29,69 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL;
+with Interfaces;
 
-package USB.Utils is
+package USB.Device.HID.Joystick is
 
-   function High (V : UInt16) return UInt8
-   is (UInt8 (Shift_Right (V, 8) and 16#FF#));
+   Gamepad_Report_Size : constant := 3;
 
-   function Low (V : UInt16) return UInt8
-   is (UInt8 (V and 16#FF#));
+   subtype Parent is Abstract_HID_Class;
 
-   procedure Copy (Src, Dst : System.Address; Count : Natural);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   type Instance
+   is new Parent (Gamepad_Report_Size)
+   with private;
 
-   pragma Inline (Copy);
+   type Axis is (X, Y);
 
-   --  Basic_RAM_Allocator --
+   procedure Set_Axis (This  : in out Instance;
+                       A     : Axis;
+                       Value : Interfaces.Integer_8);
+   --  Set value of stick axis
 
-   type Basic_RAM_Allocator (Size : Positive) is private;
-
-   function Allocate (This      : in out Basic_RAM_Allocator;
-                      Alignment :        UInt8;
-                      Len       :        UInt11)
-                      return System.Address;
+   procedure Set_Buttons (This : in out Instance;
+                          Buttons : UInt8);
+   --  Set the buttons state
 
 private
 
-   type Basic_RAM_Allocator (Size : Positive) is record
-      Buffer : UInt8_Array (1 .. Size);
-      Top : Natural := 1;
-   end record;
+   type Instance
+   is new Abstract_HID_Class (Gamepad_Report_Size)
+   with null record;
 
-   procedure Align_Top (This      : in out Basic_RAM_Allocator;
-                        Alignment :        UInt8);
+   HID_Gamepad_Report_Desc : aliased constant UInt8_Array :=
+     (
+      --  https://gist.github.com/wereii/b215c799a267af10154087b5d5af3a6b
+      16#05#, 16#01#, --  USAGE_PAGE (Generic Desktop)
+      16#09#, 16#04#, --  USAGE (Joystick)
+      16#a1#, 16#01#, --  COLLECTION (Application)
+      --  Sticks
+      16#15#, 16#81#, --    LOGICAL_MINIMUM (-127)
+      16#25#, 16#7f#, --    LOGICAL_MAXIMUM (127)
+      16#05#, 16#01#, --    USAGE_PAGE (Generic Desktop)
+      16#09#, 16#01#, --    USAGE (Pointer)
+      16#a1#, 16#00#, --    COLLECTION (Pysical)
+      16#09#, 16#30#, --      USAGE (X)
+      16#09#, 16#31#, --      USAGE (Y)
+      16#75#, 16#08#, --      REPORT_SIZE (8)
+      16#95#, 16#02#, --      REPORT_COUNT (2)
+      16#81#, 16#02#, --      INPUT (Data,Var,Abs)
+      16#c0#,         --    END_COLLECTION
 
-end USB.Utils;
+      --  Buttons
+      16#05#, 16#09#, --      USAGE_PAGE (Button)
+      16#19#, 16#01#, --      USAGE_MINIMUM (Button 1)
+      16#29#, 16#08#, --      USAGE_MAXIMUM (Button 8)
+      16#15#, 16#00#, --      LOGICAL_MINIMUM (0)
+      16#25#, 16#01#, --      LOGICAL_MAXIMUM (1)
+      16#75#, 16#01#, --      REPORT_SIZE (1)
+      16#95#, 16#08#, --      REPORT_COUNT (8)
+      16#81#, 16#02#, --      INPUT (Data,Var,Abs)
+      16#c0#          --  END_COLLECTION
+     );
+
+   overriding
+   function Report_Descriptor (This : Instance)
+                               return not null Report_Descriptor_Access
+   is (HID_Gamepad_Report_Desc'Access);
+
+end USB.Device.HID.Joystick;

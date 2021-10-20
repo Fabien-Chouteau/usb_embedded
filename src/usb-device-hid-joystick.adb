@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2018-2021, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -29,39 +29,36 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with HAL;
+with Ada.Unchecked_Conversion;
 
-package USB.Utils is
+package body USB.Device.HID.Joystick is
 
-   function High (V : UInt16) return UInt8
-   is (UInt8 (Shift_Right (V, 8) and 16#FF#));
+   --------------
+   -- Set_Axis --
+   --------------
 
-   function Low (V : UInt16) return UInt8
-   is (UInt8 (V and 16#FF#));
+   procedure Set_Axis (This  : in out Instance;
+                       A     : Axis;
+                       Value : Interfaces.Integer_8)
+   is
+      function To_UInt8 is new Ada.Unchecked_Conversion (Interfaces.Integer_8,
+                                                         UInt8);
 
-   procedure Copy (Src, Dst : System.Address; Count : Natural);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   begin
+      This.Report (This.Report'First + (case A is
+                      when X => 0,
+                      when Y => 1)) := To_UInt8 (Value);
+   end Set_Axis;
 
-   pragma Inline (Copy);
+   -----------------
+   -- Set_Buttons --
+   -----------------
 
-   --  Basic_RAM_Allocator --
+   procedure Set_Buttons (This : in out Instance;
+                          Buttons : UInt8)
+   is
+   begin
+      This.Report (This.Report'Last) := Buttons;
+   end Set_Buttons;
 
-   type Basic_RAM_Allocator (Size : Positive) is private;
-
-   function Allocate (This      : in out Basic_RAM_Allocator;
-                      Alignment :        UInt8;
-                      Len       :        UInt11)
-                      return System.Address;
-
-private
-
-   type Basic_RAM_Allocator (Size : Positive) is record
-      Buffer : UInt8_Array (1 .. Size);
-      Top : Natural := 1;
-   end record;
-
-   procedure Align_Top (This      : in out Basic_RAM_Allocator;
-                        Alignment :        UInt8);
-
-end USB.Utils;
+end USB.Device.HID.Joystick;
