@@ -1,0 +1,12 @@
+name = "tests"
+description = "usb_embedded tests"
+version = "0.0.0"
+executables = ["run_tests"]
+
+[[depends-on]]
+aunit = "*"
+aaa = "~0.2.4"
+usb_embedded = "*"
+
+[[pins]]
+usb_embedded = { path='../../usb_embedded' }
