@@ -19,7 +19,13 @@ jobs:
         with:
           toolchain: gprbuild${{ matrix.gprbuild_version }} gnat_native${{ matrix.gnat_version }} --disable-assistant
 
-      - run: alr build
+      - name: Build
+        run: alr build
+        env:
+          USB_EMBEDDED_STYLE_CHECKS: enabled
+          USB_EMBEDDED_RUNTIME_CHECKS: enabled
+          USB_EMBEDDED_COMPILE_CHECKS: enabled
+          USB_EMBEDDED_CONTRACTS: enabled
 
       - name: Testsuite
         run: cd tests && alr run
