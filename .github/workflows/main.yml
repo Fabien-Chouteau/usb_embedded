@@ -1,5 +1,3 @@
-
-
 on:
   push:
   pull_request:
@@ -9,18 +7,20 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest] # [macos-latest, windows-latest, ubuntu-latest]
         gnat_version: [^10, ^11]
         gprbuild_version: [^21]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - uses: ada-actions/toolchain@ce2020
       - uses: alire-project/setup-alire@v1
         with:
+          branch: "master"
           toolchain: gprbuild${{ matrix.gprbuild_version }} gnat_native${{ matrix.gnat_version }} --disable-assistant
 
       - name: Build
-        run: alr build
+        run: alr -q build
         env:
           USB_EMBEDDED_STYLE_CHECKS: enabled
           USB_EMBEDDED_RUNTIME_CHECKS: enabled
@@ -28,7 +28,7 @@ jobs:
           USB_EMBEDDED_CONTRACTS: enabled
 
       - name: Testsuite
-        run: cd tests && alr run
+        run: cd tests && alr -q run
         env:
           TESTS_STYLE_CHECKS: enabled
           TESTS_RUNTIME_CHECKS: enabled
