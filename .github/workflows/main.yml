@@ -15,8 +15,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - uses: ada-actions/toolchain@ce2020
       - uses: alire-project/setup-alire@v1
         with:
+          branch: "master"
           toolchain: gprbuild${{ matrix.gprbuild_version }} gnat_native${{ matrix.gnat_version }} --disable-assistant
 
       - name: Build
