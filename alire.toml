@@ -1,6 +1,6 @@
 name = "usb_embedded"
 description = "An Ada USB stack for embedded devices"
-version = "0.2.0-dev"
+version = "0.3.0-dev"
 
 authors = ["Fabien Chouteau"]
 maintainers = ["Fabien Chouteau <chouteau@adacore.com>"]
