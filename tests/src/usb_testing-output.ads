@@ -56,9 +56,10 @@ package USB_Testing.Output is
 
    function Equal (Expected, Actual : AAA.Strings.Vector) return Boolean;
 
-   function Diff (A, B   : AAA.Strings.Vector;
-                  A_Name : String := "A";
-                  B_Name : String := "B")
+   function Diff (A, B        : AAA.Strings.Vector;
+                  A_Name      : String := "A";
+                  B_Name      : String := "B";
+                  Skip_Header : Boolean := False)
                   return AAA.Strings.Vector;
 private
 

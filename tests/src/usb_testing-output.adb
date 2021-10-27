@@ -1,6 +1,8 @@
 with HAL; use HAL;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 
+with Ada.Containers.Bounded_Vectors;
+
 package body USB_Testing.Output is
 
    procedure New_Line (This : in out Text_Output) is
@@ -176,43 +178,43 @@ package body USB_Testing.Output is
    -- Diff --
    ----------
 
-   function Diff (A, B   : AAA.Strings.Vector;
-                  A_Name : String := "A";
-                  B_Name : String := "B")
+   function Diff (A, B        : AAA.Strings.Vector;
+                  A_Name      : String := "A";
+                  B_Name      : String := "B";
+                  Skip_Header : Boolean := False)
                   return AAA.Strings.Vector
    is
       --  Tentative Myers diff implementation
 
       Max : constant Integer := A.Count + B.Count;
 
+      type Action_Kind is (Keep, Insert, Remove);
+
+      type Action is record
+         Kind  : Action_Kind;
+         Index : Positive;
+      end record;
+
+      package Action_Vectors is new
+        Ada.Containers.Bounded_Vectors (Positive, Action);
+
+      subtype History_Vector
+      is Action_Vectors.Vector (Ada.Containers.Count_Type (Max));
+
       type Frontier is record
          X       : Integer := 0;
-         History : AAA.Strings.Vector;
+         History : History_Vector;
       end record;
 
       V : array (-Max .. Max) of Frontier;
 
+      K : Integer;
       X, Y : Integer := 0;
-      Skip : Boolean := False;
       Go_Down : Boolean;
 
-      History : AAA.Strings.Vector;
+      History : History_Vector;
 
-      procedure Keep (Str : String) is
-      begin
-         History.Append ("  " & Str);
-      end Keep;
-
-      procedure Insert (Str : String) is
-      begin
-         History.Append ("+ " & Str);
-      end Insert;
-
-      procedure Remove (Str : String) is
-      begin
-         History.Append ("- " & Str);
-      end Remove;
-
+      Result : AAA.Strings.Vector;
    begin
       if A.First_Index /= 1 then
          raise Program_Error;
@@ -224,56 +226,66 @@ package body USB_Testing.Output is
 
       Main_Loop :
       for D in 0 .. Max loop
-         Skip := False;
-         for K in -D .. D loop
-            if not Skip then --  Hack to get loop with steps of 2
+         K := -D;
+         while K <= D loop
+            Go_Down := (K = -D)
+              or else
+                ((K /= D) and then (V (K - 1).X < V (K + 1).X));
 
-               Go_Down := (K = -D)
-                 or else
-                   ((K /= D) and then (V (K - 1).X < V (K + 1).X));
-
-               if Go_Down then
-                  X := V (K + 1).X;
-                  History := V (K + 1).History;
-               else
-                  X := V (K - 1).X + 1;
-                  History := V (K - 1).History;
-               end if;
-
-               Y := X - K;
-
-               if Go_Down and then Y in 1 .. B.Count then
-                  Insert (B.Element (Y));
-               elsif X in 1 .. A.Count then
-                  Remove (A.Element (X));
-               end if;
-
-               while X in 0 .. A.Count - 1
-                    and then
-                     Y in 0 .. B.Count - 1
-                    and then
-                     A.Element (X + 1) = B.Element (Y + 1)
-               loop
-                  X := X + 1;
-                  Y := Y + 1;
-                  Keep (A.Element (X));
-               end loop;
-
-               if X >= A.Count and Y >= B.Count then
-                  exit Main_Loop;
-               else
-                  V (K).X := X;
-                  V (K).History := History;
-               end if;
-
+            if Go_Down then
+               X := V (K + 1).X;
+               History := V (K + 1).History;
+            else
+               X := V (K - 1).X + 1;
+               History := V (K - 1).History;
             end if;
-            Skip := not Skip;
+
+            Y := X - K;
+
+            if Go_Down and then Y in 1 .. B.Count then
+               History.Append ((Insert, Y));
+            elsif X in 1 .. A.Count then
+               History.Append ((Remove, X));
+            end if;
+
+            while X in 0 .. A.Count - 1
+              and then
+                Y in 0 .. B.Count - 1
+                and then
+                  A.Element (X + 1) = B.Element (Y + 1)
+            loop
+               X := X + 1;
+               Y := Y + 1;
+               History.Append ((Keep, X));
+            end loop;
+
+            if X >= A.Count and Y >= B.Count then
+               exit Main_Loop;
+            else
+               V (K).X := X;
+               V (K).History := History;
+            end if;
+
+            K := K + 2;
          end loop;
       end loop Main_Loop;
 
-      History.Prepend ("+++ " & B_Name);
-      History.Prepend ("--- " & A_Name);
-      return History;
+      if not Skip_Header then
+         Result.Append (String'("--- " & A_Name));
+         Result.Append (String'("+++ " & B_Name));
+      end if;
+
+      for Elt of History loop
+         case Elt.Kind is
+            when Keep =>
+               Result.Append (String'("  " & A.Element (Elt.Index)));
+            when Remove =>
+               Result.Append (String'("- " & A.Element (Elt.Index)));
+            when Insert =>
+               Result.Append (String'("+ " & B.Element (Elt.Index)));
+         end case;
+      end loop;
+      return Result;
    end Diff;
 
 end USB_Testing.Output;
