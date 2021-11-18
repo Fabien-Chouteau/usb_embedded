@@ -7,14 +7,16 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [ubuntu-latest] # [ubuntu-latest, macos-latest, windows-latest]
         gnat_version: [^10, ^11]
         gprbuild_version: [^21]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - uses: ada-actions/toolchain@ce2020
       - uses: alire-project/setup-alire@v1
         with:
+          branch: "gnatcov"
           toolchain: gprbuild${{ matrix.gprbuild_version }} gnat_native${{ matrix.gnat_version }} --disable-assistant
 
       - name: Build
@@ -26,7 +28,13 @@ jobs:
           USB_EMBEDDED_CONTRACTS: enabled
 
       - name: Testsuite
-        run: cd tests && alr -q run
+        run: |
+            cd tests
+            alr coverage --instrument -- --projects=usb_embedded --no-subprojects
+            alr build --cov-instr
+            ./bin/run_tests
+            alr coverage --report -- --projects=usb_embedded --no-subprojects *.srctrace
+
         env:
           TESTS_STYLE_CHECKS: enabled
           TESTS_RUNTIME_CHECKS: enabled
@@ -36,3 +44,9 @@ jobs:
           USB_EMBEDDED_RUNTIME_CHECKS: enabled
           USB_EMBEDDED_COMPILE_CHECKS: enabled
           USB_EMBEDDED_CONTRACTS: enabled
+
+      - name: Upload coverage results
+        uses: alire-project/gnatcov-to-codecovio-action@main
+        with:
+          fail_ci_if_error: true
+          verbose: true

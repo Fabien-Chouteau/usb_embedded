@@ -79,4 +79,14 @@ project Tests is
       for Switches ("Ada") use ("-Es"); --  Symbolic traceback
    end Binder;
 
+   package Coverage is
+      for Switches ("*") use ("--level=stmt+decision",
+                              "--projects=usb_embedded",
+                              "--no-subprojects");
+
+      for Switches ("instrument") use ("--dump-trigger=atexit");
+      for Switches ("coverage") use ("--annotate=xcov",
+                                     "--output-dir"," gnatcov_out");
+   end Coverage;
+
 end Tests;
