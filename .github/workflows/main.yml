@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [ubuntu-latest] # [ubuntu-latest, macos-latest, windows-latest]
         gnat_version: [^10, ^11]
-        gprbuild_version: [^21]
+        gprbuild_version: [^22]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
