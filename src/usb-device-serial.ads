@@ -58,6 +58,11 @@ package USB.Device.Serial is
    function List_Ctrl_State (This : Default_Serial_Class)
                              return CDC_Line_Control_State;
 
+   procedure Set_Interface_String (This  : in out Default_Serial_Class;
+                                   Stack : in out USB_Device_Stack'Class;
+                                   Str   :        String);
+   --  Only has effect when called before enumeration
+
    ------------------------------------
    -- Reading Data from the USB Host --
    ------------------------------------
@@ -91,7 +96,7 @@ private
       Interface_Index : Interface_Id;
       Int_EP          : USB.EP_Id;
       Bulk_EP         : USB.EP_Id;
-      Iface_Str       : USB.String_Id;
+      Iface_Str       : USB.String_Id := Invalid_String_Id;
 
       Int_Buf         : System.Address;
       Bulk_Out_Buf    : System.Address;

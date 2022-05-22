@@ -87,9 +87,6 @@ package body USB.Device.Serial is
 
       This.Interface_Index := Base_Interface_Index;
 
-      This.Iface_Str := Dev.Register_String
-        (USB.To_USB_String ("Serial Test iface name"));
-
       --  Default line coding
       This.Coding.Bitrate := 115_200;
       This.Coding.Stop_Bit := 0;
@@ -428,6 +425,19 @@ package body USB.Device.Serial is
    function List_Ctrl_State (This : Default_Serial_Class)
                              return CDC_Line_Control_State
    is (This.State);
+
+   --------------------------
+   -- Set_Interface_String --
+   --------------------------
+
+   procedure Set_Interface_String (This  : in out Default_Serial_Class;
+                                   Stack : in out USB_Device_Stack'Class;
+                                   Str   :        String)
+   is
+   begin
+      This.Iface_Str := USB.Device.Register_String (Stack,
+                                                    USB.To_USB_String (Str));
+   end Set_Interface_String;
 
    ----------
    -- Read --
