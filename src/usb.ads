@@ -32,6 +32,8 @@
 with System.Storage_Elements;
 with HAL; use HAL;
 
+with Usb_Embedded_Config;
+
 private with System;
 
 package USB is
@@ -138,10 +140,11 @@ package USB is
    end record;
 
    subtype String_Range is UInt8 range 0 .. 253;
-   --  The maximum length of a string is limited by the the bLength field of the
-   --  String Descriptor. This field is one byte: 0 .. 255, but bLength encodes
-   --  to total size of the descriptor including the bLenght and bDescriptorType
-   --  fields (one byte each). So the remaining length for string is 255 - 2.
+   --  The maximum length of a string is limited by the the bLength field of
+   --  the String Descriptor. This field is one byte: 0 .. 255, but bLength
+   --  encodes to total size of the descriptor including the bLenght and
+   --  bDescriptorType fields (one byte each). So the remaining length for
+   --  string is 255 - 2.
 
    type USB_String is array (String_Range range <>) of Character;
 
@@ -159,9 +162,8 @@ package USB is
    subtype Buffer_Len is System.Storage_Elements.Storage_Offset;
 
    Verbose : constant Boolean := False;
-   Logs_Enabled : constant Boolean := True;
 
-   Control_Buffer_Size : constant := 256;
-   Max_Strings : constant := 5;
-   Max_Total_String_Chars : constant := 256;
+   Control_Buffer_Size : constant := Usb_Embedded_Config.Control_Buffer_Size;
+   Max_Strings : constant := Usb_Embedded_Config.Max_Strings;
+   Max_Total_String_Chars : constant := Usb_Embedded_Config.String_Buffer_Size;
 end USB;

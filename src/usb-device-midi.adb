@@ -83,9 +83,7 @@ package body USB.Device.MIDI is
       WG : BBqueue.Buffers.Write_Grant;
    begin
 
-      if Logs_Enabled then
-         USB.Logging.Device.Log_MIDI_Send;
-      end if;
+      USB.Logging.Device.Log_MIDI_Send;
 
       Grant (This.TX_Queue, WG, 4);
 
@@ -113,9 +111,7 @@ package body USB.Device.MIDI is
    is
    begin
 
-      if Logs_Enabled then
-         USB.Logging.Device.Log_MIDI_Setup_RX;
-      end if;
+      USB.Logging.Device.Log_MIDI_Setup_RX;
 
       UDC.EP_Ready_For_Data (EP      => This.EP,
                              Addr    => This.EP_Out_Buf,
@@ -135,9 +131,7 @@ package body USB.Device.MIDI is
       In_Progress : Boolean;
    begin
 
-      if Logs_Enabled then
-         USB.Logging.Device.Log_MIDI_Setup_TX;
-      end if;
+      USB.Logging.Device.Log_MIDI_Setup_TX;
 
       Atomic.Test_And_Set (This.TX_In_Progress, In_Progress);
       if In_Progress then
@@ -153,9 +147,7 @@ package body USB.Device.MIDI is
                          Dst   => This.EP_In_Buf,
                          Count => Natural (Slice (RG).Length));
 
-         if Logs_Enabled then
-            USB.Logging.Device.Log_MIDI_Write_Packet;
-         end if;
+         USB.Logging.Device.Log_MIDI_Write_Packet;
 
          --  Send IN buffer
          UDC.EP_Write_Packet (Ep   => This.EP,
@@ -180,9 +172,7 @@ package body USB.Device.MIDI is
    is
    begin
 
-      if Logs_Enabled then
-         USB.Logging.Device.Log_MIDI_Init;
-      end if;
+      USB.Logging.Device.Log_MIDI_Init;
 
       if not Dev.Request_Endpoint (Interrupt, This.EP) then
          return Not_Enough_EPs;
@@ -390,9 +380,7 @@ package body USB.Device.MIDI is
       return Setup_Request_Answer
    is
    begin
-      if Logs_Enabled then
-         USB.Logging.Device.Log_MIDI_Config;
-      end if;
+      USB.Logging.Device.Log_MIDI_Config;
 
       if Index = 1 then
 
@@ -452,7 +440,7 @@ package body USB.Device.MIDI is
           Req.Request = 6 -- GET_DESCRIPTOR
       then
          declare
---              Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
+            --  Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
             Desc_Type : constant UInt8 :=
               UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
 
@@ -491,9 +479,7 @@ package body USB.Device.MIDI is
    begin
       if EP = (This.EP, EP_Out) then
 
-         if Logs_Enabled then
-            USB.Logging.Device.Log_MIDI_Out_TC;
-         end if;
+         USB.Logging.Device.Log_MIDI_Out_TC;
 
          --  Move OUT data to the RX queue
          declare
@@ -510,9 +496,7 @@ package body USB.Device.MIDI is
                Commit (This.RX_Queue, WG, BBqueue.Count (CNT));
             else
 
-               if Logs_Enabled then
-                  USB.Logging.Device.Log_MIDI_RX_Discarded;
-               end if;
+               USB.Logging.Device.Log_MIDI_RX_Discarded;
 
                This.RX_Discarded := This.RX_Discarded + 1;
             end if;
@@ -522,9 +506,7 @@ package body USB.Device.MIDI is
 
       elsif EP = (This.EP, EP_In) then
 
-         if Logs_Enabled then
-            USB.Logging.Device.Log_MIDI_In_TC;
-         end if;
+         USB.Logging.Device.Log_MIDI_In_TC;
 
          Atomic.Clear (This.TX_In_Progress);
 

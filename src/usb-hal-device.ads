@@ -72,8 +72,8 @@ package USB.HAL.Device is
                             Min_Alignment :        UInt8 := 1)
                             return System.Address
    is abstract;
-   --  Allocate a buffer for the given End-Point, either from RAM or interal USB
-   --  Controller memory depending on the controller.
+   --  Allocate a buffer for the given End-Point, either from RAM or interal
+   --  USB Controller memory depending on the controller.
 
    function Valid_EP_Id (This : in out USB_Device_Controller;
                          EP   :        EP_Id)
@@ -112,10 +112,10 @@ package USB.HAL.Device is
 
    function Early_Address (This : USB_Device_Controller) return Boolean
    is abstract;
-   --  This function should return True if Set_Address must be called during the
-   --  processing of the SET_ADDRESS setup request instead of at the end of the
-   --  setup request. For some reason, this is required for the USB controller
-   --  of the STM32F series.
+   --  This function should return True if Set_Address must be called during
+   --  the processing of the SET_ADDRESS setup request instead of at the end of
+   --  the setup request. For some reason this is required for the USB
+   --  controller of the STM32F series.
 
    function Img (Evt : UDC_Event) return String
    is (case Evt.Kind is

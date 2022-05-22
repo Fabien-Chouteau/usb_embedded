@@ -31,6 +31,18 @@
 
 package body USB.Logging.Device is
 
+   Event_Buffer_Size : constant := Usb_Embedded_Config.Event_Log_Buffer_Size;
+
+   type Event_Index is mod Event_Buffer_Size;
+
+   Event_Buffer : array (Event_Index) of Log_Event :=
+     (others => (Kind  => None, ID => 0));
+
+   Index : Event_Index := Event_Index'First;
+   ID    : Log_Event_ID;
+
+   procedure Log (Evt : Log_Event);
+
    ---------
    -- Log --
    ---------
@@ -47,10 +59,12 @@ package body USB.Logging.Device is
 
    procedure Log (Evt : USB.HAL.Device.UDC_Event) is
    begin
-      ID := ID + 1;
-      Log (Log_Event'(Kind      => UDC_Evt,
-                      ID        => ID,
-                      UDC_Event => Evt));
+      if Evt /= None then
+         ID := ID + 1;
+         Log (Log_Event'(Kind      => UDC_Evt,
+                         ID        => ID,
+                         UDC_Event => Evt));
+      end if;
    end Log;
 
    -------------------

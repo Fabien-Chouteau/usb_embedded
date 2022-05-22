@@ -545,9 +545,7 @@ package body USB.Device is
             Evt : constant UDC_Event := This.UDC.Poll;
          begin
 
-            if Logs_Enabled and then Evt.Kind /= None then
-               USB.Logging.Device.Log (Evt);
-            end if;
+            USB.Logging.Device.Log (Evt);
 
             case Evt.Kind is
             when Reset =>

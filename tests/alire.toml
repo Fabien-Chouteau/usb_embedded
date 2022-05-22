@@ -9,4 +9,7 @@ aaa = "~0.2.4"
 usb_embedded = "*"
 
 [[pins]]
-usb_embedded = { path='../../usb_embedded' }
+usb_embedded = { path='..' }
+
+[build-profiles]
+usb_embedded = 'validation'

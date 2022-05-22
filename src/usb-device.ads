@@ -115,9 +115,10 @@ package USB.Device is
                         return Init_Result
    is abstract;
 
-   procedure Get_Class_Info (This                     : in out USB_Device_Class;
-                             Number_Of_Interfaces     :    out Interface_Id;
-                             Config_Descriptor_Length :    out Natural)
+   procedure Get_Class_Info
+     (This                     : in out USB_Device_Class;
+      Number_Of_Interfaces     :    out Interface_Id;
+      Config_Descriptor_Length :    out Natural)
    is abstract;
 
    procedure Fill_Config_Descriptor (This : in out USB_Device_Class;
