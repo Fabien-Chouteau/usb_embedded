@@ -1,6 +1,6 @@
 ------------------------------------------------------------------------------
 --                                                                          --
---                        Copyright (C) 2021, AdaCore                       --
+--                     Copyright (C) 2021-2022, AdaCore                     --
 --                                                                          --
 --  Redistribution and use in source and binary forms, with or without      --
 --  modification, are permitted provided that the following conditions are  --
@@ -55,6 +55,7 @@ package body USB.Device.Serial is
    begin
 
       USB.Logging.Device.Log_Serial_Init;
+
       --  Request Interrupt EP --
 
       if not Dev.Request_Endpoint (Interrupt, This.Int_EP) then
@@ -236,6 +237,7 @@ package body USB.Device.Serial is
    is
    begin
       USB.Logging.Device.Log_Serial_Config;
+
       if Index = 1 then
 
          UDC.EP_Setup (EP       => (This.Int_EP, EP_In),
@@ -339,6 +341,7 @@ package body USB.Device.Serial is
       if EP = (This.Bulk_EP, EP_Out) then
 
          USB.Logging.Device.Log_Serial_Out_TC;
+
          --  Move OUT data to the RX queue
          declare
             WG : BBqueue.Buffers.Write_Grant;
@@ -359,7 +362,9 @@ package body USB.Device.Serial is
 
       elsif EP = (This.Bulk_EP, EP_In) then
          USB.Logging.Device.Log_Serial_In_TC;
-         This.TX_In_Progress := False;
+
+         Atomic.Clear (This.TX_In_Progress);
+
          This.Setup_TX (UDC);
 
       else
@@ -376,6 +381,7 @@ package body USB.Device.Serial is
    is
    begin
       USB.Logging.Device.Log_Serial_Setup_RX;
+
       UDC.EP_Ready_For_Data (EP      => This.Bulk_EP,
                              Addr    => This.Bulk_Out_Buf,
                              Max_Len => Bulk_Buffer_Size,
@@ -390,9 +396,11 @@ package body USB.Device.Serial is
                        UDC  : in out USB_Device_Controller'Class)
    is
       RG : BBqueue.Buffers.Read_Grant;
+      TX_In_Progress : Boolean;
    begin
 
-      if This.TX_In_Progress then
+      Atomic.Test_And_Set (This.TX_In_Progress, TX_In_Progress);
+      if TX_In_Progress then
          return;
       end if;
 
@@ -408,7 +416,6 @@ package body USB.Device.Serial is
                          Count => Natural (Slice (RG).Length));
 
          USB.Logging.Device.Log_Serial_Write_Packet;
-         This.TX_In_Progress := True;
 
          --  Send IN buffer
          UDC.EP_Write_Packet (Ep   => This.Bulk_EP,
@@ -416,6 +423,8 @@ package body USB.Device.Serial is
                               Len  => UInt32 (Slice (RG).Length));
 
          Release (This.TX_Queue, RG);
+      else
+         Atomic.Clear (This.TX_In_Progress);
       end if;
    end Setup_TX;
 
@@ -462,6 +471,7 @@ package body USB.Device.Serial is
 
       if State (RG) = Valid then
          USB.Logging.Device.Log_Serial_Receive;
+
          Len := UInt32 (Slice (RG).Length);
          USB.Utils.Copy (Src   => Slice (RG).Addr,
                          Dst   => Buf,
@@ -500,7 +510,9 @@ package body USB.Device.Serial is
       Grant (This.TX_Queue, WG, Count (Len));
 
       if State (WG) = Valid then
+
          USB.Logging.Device.Log_Serial_Send;
+
          Len := UInt32'Min (Len, UInt32 (Slice (WG).Length));
 
          USB.Utils.Copy (Src   => Buf,

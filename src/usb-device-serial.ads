@@ -31,6 +31,7 @@
 
 with BBqueue;
 private with BBqueue.Buffers;
+private with Atomic;
 
 package USB.Device.Serial is
 
@@ -105,7 +106,7 @@ private
       TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
       RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
 
-      TX_In_Progress : Boolean := False with Volatile;
+      TX_In_Progress : aliased Atomic.Flag := Atomic.Init (False);
 
       Coding : CDC_Line_Coding;
       State  : CDC_Line_Control_State;
