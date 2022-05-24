@@ -58,14 +58,136 @@ package body USB.Logging.Device is
    ---------
 
    procedure Log (Evt : USB.HAL.Device.UDC_Event) is
+      use USB.HAL.Device;
    begin
-      if Evt /= None then
+      if Evt.Kind /= None then
          ID := ID + 1;
          Log (Log_Event'(Kind      => UDC_Evt,
                          ID        => ID,
                          UDC_Event => Evt));
       end if;
    end Log;
+
+   -------------------
+   -- Log_Serial_Init --
+   -------------------
+
+   procedure Log_Serial_Init is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Init,
+                      ID        => ID));
+   end Log_Serial_Init;
+
+   ---------------------
+   -- Log_Serial_Config --
+   ---------------------
+
+   procedure Log_Serial_Config is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Config,
+                      ID        => ID));
+   end Log_Serial_Config;
+
+   -------------------
+   -- Log_Serial_Send --
+   -------------------
+
+   procedure Log_Serial_Send is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Send,
+                      ID        => ID));
+   end Log_Serial_Send;
+
+   ----------------------
+   -- Log_Serial_Receive --
+   ----------------------
+
+   procedure Log_Serial_Receive is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Receive,
+                      ID        => ID));
+   end Log_Serial_Receive;
+
+   ---------------------
+   -- Log_Serial_Out_TC --
+   ---------------------
+
+   procedure Log_Serial_Out_TC is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Out_TC,
+                      ID        => ID));
+   end Log_Serial_Out_TC;
+
+   --------------------
+   -- Log_Serial_In_TC --
+   --------------------
+
+   procedure Log_Serial_In_TC is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_In_TC,
+                      ID        => ID));
+   end Log_Serial_In_TC;
+
+   -----------------------
+   -- Log_Serial_Setup_TX --
+   -----------------------
+
+   procedure Log_Serial_Setup_TX is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Setup_TX,
+                      ID        => ID));
+   end Log_Serial_Setup_TX;
+
+   -----------------------
+   -- Log_Serial_Setup_RX --
+   -----------------------
+
+   procedure Log_Serial_Setup_RX is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Setup_RX,
+                      ID        => ID));
+   end Log_Serial_Setup_RX;
+
+   ---------------------------
+   -- Log_Serial_RX_Discarded --
+   ---------------------------
+
+   procedure Log_Serial_RX_Discarded is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_RX_Discarded,
+                      ID        => ID));
+   end Log_Serial_RX_Discarded;
+
+   ---------------------------
+   -- Log_Serial_TX_Discarded --
+   ---------------------------
+
+   procedure Log_Serial_TX_Discarded is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_TX_Discarded,
+                      ID        => ID));
+   end Log_Serial_TX_Discarded;
+
+   -----------------------------
+   -- Log_Serial_Write_Packet --
+   -----------------------------
+
+   procedure Log_Serial_Write_Packet is
+   begin
+      ID := ID + 1;
+      Log (Log_Event'(Kind      => Serial_Write_Packet,
+                      ID        => ID));
+   end Log_Serial_Write_Packet;
 
    -------------------
    -- Log_MIDI_Init --
@@ -187,5 +309,4 @@ package body USB.Logging.Device is
       Log (Log_Event'(Kind      => MIDI_Write_Packet,
                       ID        => ID));
    end Log_MIDI_Write_Packet;
-
 end USB.Logging.Device;

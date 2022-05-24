@@ -10,7 +10,7 @@ project Usb_Embedded is
    for Library_Dir use "lib";
 
    package Naming is
-      case Usb_Embedded_Config.Usb_Embedded_Config is
+      case Usb_Embedded_Config.Event_Log_Buffer_Size is
          when "0" =>
             for Body ("USB.Logging.Device") use "usb-logging-device__null.adb";
          when others =>

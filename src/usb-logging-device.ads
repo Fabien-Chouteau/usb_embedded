@@ -35,6 +35,18 @@ package USB.Logging.Device is
 
    procedure Log (Evt : USB.HAL.Device.UDC_Event);
 
+   procedure Log_Serial_Init;
+   procedure Log_Serial_Config;
+   procedure Log_Serial_Send;
+   procedure Log_Serial_Receive;
+   procedure Log_Serial_Out_TC;
+   procedure Log_Serial_In_TC;
+   procedure Log_Serial_Setup_TX;
+   procedure Log_Serial_Setup_RX;
+   procedure Log_Serial_RX_Discarded;
+   procedure Log_Serial_TX_Discarded;
+   procedure Log_Serial_Write_Packet;
+
    procedure Log_MIDI_Init;
    procedure Log_MIDI_Config;
    procedure Log_MIDI_Send;
@@ -51,6 +63,19 @@ private
 
    type Log_Event_Kind is (None,
                            UDC_Evt,
+
+                           -- Serial Class --
+                           Serial_Init,
+                           Serial_Config,
+                           Serial_Send,
+                           Serial_Receive,
+                           Serial_Out_TC,
+                           Serial_In_TC,
+                           Serial_Setup_TX,
+                           Serial_Setup_RX,
+                           Serial_RX_Discarded,
+                           Serial_TX_Discarded,
+                           Serial_Write_Packet,
 
                            --  MIDI Class --
                            MIDI_Init,

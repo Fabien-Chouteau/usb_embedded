@@ -36,6 +36,7 @@ with BBqueue;         use BBqueue;
 with BBqueue.Buffers; use BBqueue.Buffers;
 
 with USB.Utils;
+with USB.Logging.Device;
 
 package body USB.Device.Serial is
 
@@ -53,6 +54,7 @@ package body USB.Device.Serial is
    is
    begin
 
+      USB.Logging.Device.Log_Serial_Init;
       --  Request Interrupt EP --
 
       if not Dev.Request_Endpoint (Interrupt, This.Int_EP) then
@@ -233,6 +235,7 @@ package body USB.Device.Serial is
       return Setup_Request_Answer
    is
    begin
+      USB.Logging.Device.Log_Serial_Config;
       if Index = 1 then
 
          UDC.EP_Setup (EP       => (This.Int_EP, EP_In),
@@ -335,6 +338,7 @@ package body USB.Device.Serial is
    begin
       if EP = (This.Bulk_EP, EP_Out) then
 
+         USB.Logging.Device.Log_Serial_Out_TC;
          --  Move OUT data to the RX queue
          declare
             WG : BBqueue.Buffers.Write_Grant;
@@ -354,6 +358,7 @@ package body USB.Device.Serial is
          This.Setup_RX (UDC);
 
       elsif EP = (This.Bulk_EP, EP_In) then
+         USB.Logging.Device.Log_Serial_In_TC;
          This.TX_In_Progress := False;
          This.Setup_TX (UDC);
 
@@ -370,6 +375,7 @@ package body USB.Device.Serial is
                        UDC  : in out USB_Device_Controller'Class)
    is
    begin
+      USB.Logging.Device.Log_Serial_Setup_RX;
       UDC.EP_Ready_For_Data (EP      => This.Bulk_EP,
                              Addr    => This.Bulk_Out_Buf,
                              Max_Len => Bulk_Buffer_Size,
@@ -390,6 +396,8 @@ package body USB.Device.Serial is
          return;
       end if;
 
+      USB.Logging.Device.Log_Serial_Setup_TX;
+
       Read (This.TX_Queue, RG, Bulk_Buffer_Size);
 
       if State (RG) = Valid then
@@ -399,6 +407,7 @@ package body USB.Device.Serial is
                          Dst   => This.Bulk_In_Buf,
                          Count => Natural (Slice (RG).Length));
 
+         USB.Logging.Device.Log_Serial_Write_Packet;
          This.TX_In_Progress := True;
 
          --  Send IN buffer
@@ -452,6 +461,7 @@ package body USB.Device.Serial is
       Read (This.RX_Queue, RG, Count (Len));
 
       if State (RG) = Valid then
+         USB.Logging.Device.Log_Serial_Receive;
          Len := UInt32 (Slice (RG).Length);
          USB.Utils.Copy (Src   => Slice (RG).Addr,
                          Dst   => Buf,
@@ -490,6 +500,7 @@ package body USB.Device.Serial is
       Grant (This.TX_Queue, WG, Count (Len));
 
       if State (WG) = Valid then
+         USB.Logging.Device.Log_Serial_Send;
          Len := UInt32'Min (Len, UInt32 (Slice (WG).Length));
 
          USB.Utils.Copy (Src   => Buf,

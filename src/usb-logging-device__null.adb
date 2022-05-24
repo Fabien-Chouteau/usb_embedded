@@ -32,6 +32,17 @@
 package body USB.Logging.Device is
 
    procedure Log (Evt : USB.HAL.Device.UDC_Event) is null;
+   procedure Log_Serial_Init is null;
+   procedure Log_Serial_Config is null;
+   procedure Log_Serial_Send is null;
+   procedure Log_Serial_Receive is null;
+   procedure Log_Serial_Out_TC is null;
+   procedure Log_Serial_In_TC is null;
+   procedure Log_Serial_Setup_TX is null;
+   procedure Log_Serial_Setup_RX is null;
+   procedure Log_Serial_RX_Discarded is null;
+   procedure Log_Serial_TX_Discarded is null;
+   procedure Log_Serial_Write_Packet is null;
    procedure Log_MIDI_Init is null;
    procedure Log_MIDI_Config is null;
    procedure Log_MIDI_Send is null;
