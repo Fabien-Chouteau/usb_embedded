@@ -14,7 +14,7 @@ hal = "~0.3"
 bbqueue = "~0.3.0"
 
 [configuration.variables]
-Control_Buffer_Size = {type = "Integer", first = 0, default = 256 }
+Control_Buffer_Size = {type = "Integer", first = 256, default = 256 }
 String_Buffer_Size = {type = "Integer", first = 0, default = 256 }
 Max_Strings = {type = "Integer", first = 0, default = 10 }
 Event_Log_Buffer_Size = {type = "Integer", first = 0, default = 0 }
