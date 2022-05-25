@@ -126,18 +126,23 @@ package body USB_Testing.UDC_Stub is
          raise Program_Error with "UDC Error: EP stalled in EP_Read_Packet";
       end if;
 
-      if Len > This.EPs (Ep) (EP_Out).Buf_Len then
-         raise Program_Error with "UDC Error: Trying to write " & Len'Img &
-           " byte(s) to a" & This.EPs (Ep) (EP_Out).Buf_Len'Img &
-           " byte(s) EP OUT buffer";
+      if This.EPs (Ep) (EP_In).Stall then
+         raise Program_Error with "UDC Error: EP stalled in EP_Read_Packet";
       end if;
 
-      if This.EPs (Ep) (EP_Out).Buf = System.Null_Address then
+      if Len > This.EPs (Ep) (EP_Out).Transfer_Len then
+         raise Program_Error with "UDC Error: Trying to write " & Len'Img &
+           " byte(s) to a" & This.EPs (Ep) (EP_Out).Transfer_Len'Img &
+           " byte(s) OUT transfer";
+      end if;
+
+      if This.EPs (Ep) (EP_Out).EP_Buf = System.Null_Address then
          raise Program_Error with "UDC Error: Trying to write to a null EP OUT buffer";
       end if;
 
       declare
-         Data : UInt8_Array (1 .. Natural (Len)) with Address => This.EPs (Ep) (EP_Out).Buf;
+         Data : UInt8_Array (1 .. Natural (Len))
+           with Address => This.EPs (Ep) (EP_Out).EP_Buf;
       begin
          for Elt of Data loop
             if This.RX_Index in This.RX_Data'Range then
@@ -175,7 +180,10 @@ package body USB_Testing.UDC_Stub is
 
       for EP_Couple of This.EPs loop
          for EP of EP_Couple loop
-            EP := (others => <>);
+            EP.Setup := False;
+            EP.NAK := False;
+            EP.Stall := False;
+            EP.Transfer_Len := 0;
          end loop;
       end loop;
    end Initialize;
@@ -187,17 +195,25 @@ package body USB_Testing.UDC_Stub is
    overriding
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11;
-                            Min_Alignment :        UInt8 := 1)
+                            Len           :        UInt11)
                             return System.Address
    is
    begin
       This.Put_Line ("UDC Request_Buffer (" & Img (Ep) &
-                       ", Align =>" & Min_Alignment'Img &
                        ", Len =>" & Len'Img & ")");
-      return Standard.USB.Utils.Allocate (This.Alloc,
-                                          Alignment => Min_Alignment,
-                                          Len => Len);
+
+      This.EPs (Ep.Num) (Ep.Dir).EP_Buf :=
+        Standard.USB.Utils.Allocate (This.Alloc,
+                                     Alignment => 1,
+                                     Len       => Len);
+
+      if This.EPs (Ep.Num) (Ep.Dir).EP_Buf /= System.Null_Address then
+         This.EPs (Ep.Num) (Ep.Dir).Max_Size := Len;
+      else
+         This.EPs (Ep.Num) (Ep.Dir).Max_Size := 0;
+      end if;
+
+      return This.EPs (Ep.Num) (Ep.Dir).EP_Buf;
    end Request_Buffer;
 
    -----------
@@ -279,17 +295,17 @@ package body USB_Testing.UDC_Stub is
       return Ret;
    end Poll;
 
-   ---------------------
-   -- EP_Write_Packet --
-   ---------------------
+   --------------------
+   -- EP_Send_Packet --
+   --------------------
 
    overriding
-   procedure EP_Write_Packet (This : in out Controller;
-                              Ep   : EP_Id;
-                              Addr : System.Address;
-                              Len  : UInt32)
+   procedure EP_Send_Packet (This : in out Controller;
+                             Ep   : EP_Id;
+                             Len  : UInt32)
    is
-      Data : UInt8_Array (1 .. Natural (Len)) with Address => Addr;
+      Data : UInt8_Array (1 .. Natural (Len))
+        with Address => This.EPs (Ep)(EP_In).EP_Buf;
 
    begin
       This.Put_Line ("UDC EP_Write_Packet " & Img (EP_Addr'(Ep, EP_In)) &
@@ -307,6 +323,10 @@ package body USB_Testing.UDC_Stub is
          raise Program_Error with "UDC Error: EP stalled in EP_Write_Packet";
       end if;
 
+      if This.EPs (Ep) (EP_In).EP_Buf = System.Null_Address then
+         raise Program_Error with "UDC Error: Trying to read from a null EP IN buffer";
+      end if;
+
       if Len > UInt32 (This.EPs (Ep) (EP_In).Max_Size) then
          raise Program_Error with "UDC Error: Packet too big in EP_Write_Packet";
       end if;
@@ -318,22 +338,20 @@ package body USB_Testing.UDC_Stub is
                            EP   => (Ep, EP_In),
                            BCNT => UInt11 (Len))));
 
-   end EP_Write_Packet;
+   end EP_Send_Packet;
 
    --------------
    -- EP_Setup --
    --------------
 
    overriding
-   procedure EP_Setup (This     : in out Controller;
-                       EP       : EP_Addr;
-                       Typ      : EP_Type;
-                       Max_Size : UInt16)
+   procedure EP_Setup (This : in out Controller;
+                       EP   : EP_Addr;
+                       Typ  : EP_Type)
    is
    begin
       This.Put_Line ("UDC EP_Setup " & Img (EP) &
-                       " Type: " & Typ'Img &
-                       " Max_Size:" & Max_Size'Img);
+                       " Type: " & Typ'Img);
 
       if EP.Num not in This.EPs'Range then
          raise Program_Error with "UDC Error: invalid EP number in EP_Setup";
@@ -341,7 +359,6 @@ package body USB_Testing.UDC_Stub is
 
       This.EPs (EP.Num) (EP.Dir).Setup := True;
       This.EPs (EP.Num) (EP.Dir).Typ := Typ;
-      This.EPs (EP.Num) (EP.Dir).Max_Size := Max_Size;
    end EP_Setup;
 
    -----------------------
@@ -351,7 +368,6 @@ package body USB_Testing.UDC_Stub is
    overriding
    procedure EP_Ready_For_Data (This  : in out Controller;
                                 EP    : EP_Id;
-                                Addr  : System.Address;
                                 Size  : UInt32;
                                 Ready : Boolean := True)
    is
@@ -365,8 +381,7 @@ package body USB_Testing.UDC_Stub is
       end if;
 
       This.EPs (EP) (EP_Out).NAK := not Ready;
-      This.EPs (EP) (EP_Out).Buf_Len := UInt11 (Size);
-      This.EPs (EP) (EP_Out).Buf := Addr;
+      This.EPs (EP) (EP_Out).Transfer_Len := UInt11 (Size);
    end EP_Ready_For_Data;
 
    --------------

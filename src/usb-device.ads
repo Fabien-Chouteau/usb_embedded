@@ -169,11 +169,27 @@ private
    type Control_Machine is record
       --  For better performances this buffer has to be word aligned. So we put
       --  it as the first field of this record.
-      RX_Buf : UInt8_Array (1 .. Control_Buffer_Size);
+      Buffer : UInt8_Array (1 .. Control_Buffer_Size);
+      --  This Buffer is used to store various data used by the control machine
+      --  such as descriptors or incomming setup data. It's content will
+      --  be copied to/from EP_In/Out_Addr buffer allocated from the UDC.
+      --  Sometimes the class will provide its own data buffer for transfer
+      --  in which case this Buffer is not used.
+
+      EP_Out_Addr : System.Address := System.Null_Address;
+      EP_In_Addr  : System.Address := System.Null_Address;
+      --  Endpoint buffer addresses allocated from the UDC
 
       Req : Setup_Data;
+
       Buf : System.Address;
+      --  Pointer to the current chunk of in/out data. Can point to Buffer
+      --  above or another buffer provided by the class.
+
       Len : Buffer_Len := 0;
+      --  For Out control the number of bytes received so far.
+      --  For In control the number of remaining bytes to send.
+
       State : Control_State := Idle;
       Need_ZLP : Boolean := False;
    end record;
@@ -214,7 +230,7 @@ private
       Dev_State : Device_State := Idle;
 
       Initializing : Any_USB_Device_Class := null;
-      --  Tacks which class is currently being initialized
+      --  Tracks which class is currently being initialized
 
       Last_String_Id : String_Id := 0;
       Last_String_Index : Natural := 0;

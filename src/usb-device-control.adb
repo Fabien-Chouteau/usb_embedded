@@ -33,6 +33,8 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 with System.Storage_Elements; use System.Storage_Elements;
 
+with USB.Utils;
+
 package body USB.Device.Control is
 
    function Need_ZLP (Len     : Buffer_Len;
@@ -77,7 +79,7 @@ package body USB.Device.Control is
 
       This.Ctrl.State := Idle;
 
-      This.UDC.EP_Ready_For_Data (EP, System.Null_Address, 0, False);
+      This.UDC.EP_Ready_For_Data (EP, 0, False);
 
       if Verbose then
          Put_Line ("Req: " & Img (This.Ctrl.Req));
@@ -103,8 +105,7 @@ package body USB.Device.Control is
          when Last_Data_In =>
             This.Ctrl.State := Status_Out;
             This.UDC.EP_Ready_For_Data (0,
-                                        This.Ctrl.RX_Buf'Address,
-                                        UInt32 (This.Ctrl.Len),
+                                        UInt32 (This.Max_Packet_Size),
                                         True);
 
          when Status_In =>
@@ -215,20 +216,21 @@ package body USB.Device.Control is
          return;
       end if;
 
-      --  Get ready to recieve the data
+      --  Get ready to recieve the data.
 
       This.Ctrl.Len := 0;
-      This.Ctrl.Buf := This.Ctrl.RX_Buf'Address;
+      This.Ctrl.Buf := This.Ctrl.Buffer'Address;
+
+      --  The UDC will write data to EP_Out_Addr. Upon transfer complete, we
+      --  will copy to internal control buffer.
 
       if Req.Length > UInt16 (This.Max_Packet_Size) then
          This.Ctrl.State := Data_Out;
          This.UDC.EP_Ready_For_Data (0,
-                                     This.Ctrl.RX_Buf'Address,
                                      UInt32 (This.Max_Packet_Size),
                                      True);
       else
          This.UDC.EP_Ready_For_Data (0,
-                                     This.Ctrl.RX_Buf'Address,
                                      UInt32 (Req.Length),
                                      True);
          This.Ctrl.State := Last_Data_Out;
@@ -344,29 +346,10 @@ package body USB.Device.Control is
                Res := Class.Ptr.Setup_Read_Request
                  (Req, This.Ctrl.Buf, This.Ctrl.Len);
 
-               if Res = Handled and then This.Ctrl.Len /= 0 then
-
-                  --  Copy the buffer provided by the class in the control
-                     --  buffer, this ensures that the data is in RAM as
-                     --  required by some UDC with internal DMA (samd51).
-
-                  if This.Ctrl.Len > This.Ctrl.RX_Buf'Length then
-                     raise Program_Error
-                       with "Control buffer too small for class control data";
-                  end if;
-
-                  declare
-                     Src : UInt8_Array (1 .. Natural (This.Ctrl.Len))
-                       with Address => This.Ctrl.Buf;
-                  begin
-                     This.Ctrl.RX_Buf (1 .. Natural (This.Ctrl.Len)) := Src;
-                     This.Ctrl.Buf := This.Ctrl.RX_Buf'Address;
-                  end;
-               end if;
                return Res;
             else
                return Class.Ptr.Setup_Write_Request
-                 (Req, This.Ctrl.RX_Buf (1 .. Natural (Req.Length)));
+                 (Req, This.Ctrl.Buffer (1 .. Natural (Req.Length)));
             end if;
          end if;
       end loop;
@@ -437,7 +420,7 @@ package body USB.Device.Control is
             end if;
 
             --  zero-length-packet to ack the setup req
-            This.UDC.EP_Write_Packet (0, System.Null_Address, 0);
+            This.UDC.EP_Send_Packet (0, 0);
             This.Ctrl.State := Status_In;
          end if;
       else
@@ -454,7 +437,7 @@ package body USB.Device.Control is
    begin
       if Dispatch_Request (This) /= Not_Supported then
          --  zero-length-packet to ack the setup req
-         This.UDC.EP_Write_Packet (0, System.Null_Address, 0);
+         This.UDC.EP_Send_Packet (0, 0);
          This.Ctrl.State := Status_In;
       else
          --  Stall transaction to indicate an error
@@ -470,9 +453,11 @@ package body USB.Device.Control is
    begin
       if Buffer_Len (This.Max_Packet_Size) < This.Ctrl.Len then
 
-         This.UDC.EP_Write_Packet (0,
-                                   This.Ctrl.Buf,
-                                   UInt32 (This.Max_Packet_Size));
+         USB.Utils.Copy (Src   => This.Ctrl.Buf,
+                         Dst   => This.Ctrl.EP_In_Addr,
+                         Count => UInt11 (This.Max_Packet_Size));
+
+         This.UDC.EP_Send_Packet (0, UInt32 (This.Max_Packet_Size));
 
          This.Ctrl.Buf := This.Ctrl.Buf +
            Buffer_Len (This.Max_Packet_Size);
@@ -482,7 +467,12 @@ package body USB.Device.Control is
          This.Ctrl.State := Data_In;
 
       else
-         This.UDC.EP_Write_Packet (0, This.Ctrl.Buf, UInt32 (This.Ctrl.Len));
+         --  Copy data to the UDC EP buffer
+         USB.Utils.Copy (Src   => This.Ctrl.Buf,
+                         Dst   => This.Ctrl.EP_In_Addr,
+                         Count => UInt11 (This.Ctrl.Len));
+
+         This.UDC.EP_Send_Packet (0, UInt32 (This.Ctrl.Len));
 
          if This.Ctrl.Need_ZLP then
             This.Ctrl.State := Data_In;
@@ -505,6 +495,11 @@ package body USB.Device.Control is
         Buffer_Len'Min (Buffer_Len (This.Max_Packet_Size),
                         Buffer_Len (This.Ctrl.Req.Length) - This.Ctrl.Len);
    begin
+      --  Copy data from the UDC EP buffer
+      USB.Utils.Copy (Src   => This.Ctrl.EP_Out_Addr,
+                      Dst   => This.Ctrl.Buf,
+                      Count => UInt11 (Read_Size));
+
       This.Ctrl.Len := This.Ctrl.Len + Read_Size;
       This.Ctrl.Buf := This.Ctrl.Buf + Read_Size;
    end Receive_Chunk;

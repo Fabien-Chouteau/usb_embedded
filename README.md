@@ -119,12 +119,28 @@ classes, so an end-points request can potentially fail.
 
 ### Requesting End-Point Buffers
 
-For some UDCs sending and receiving data on the end-points can only be done
-through a specific RAM area attached to the UDC.
+Some UDC have internal DMA controller to access any data buffers in RAM
+(samd51), others can only access special memory banks attached to the
+controller (RP2040).
 
-For this reason the USB stack provides a way for classes to request buffers
-that will be used with end-points. Classes *must always* use memory allocated
-from this API with end-points and nothing else.
+In theory the internal DMA controller allow a design with one less copy of
+memory during the transfers as data doesn't have to be copied to a special
+memory area. In practice there are constraints on what the DMA control can do,
+for instance data has to be aligned on 4 bytes or data must not be in flash
+(samd51). The result is that USB class drivers that will work on any hardware
+will not benefit always from this optimization (less copy) and handling the
+different cases will increase the complexity.
+
+For the design of this USB stack the choice is to ignore DMA controllers and
+always use memory allocated by the UDC. The stack provides a way for classes to
+request buffers that will be used with end-points. UDC will either return a
+pointer in RAM (samd51) or in dedicated memory, regardless the provided memory
+must be accessible by the CPU to read/write data from/to it.
+
+Classes *must always* use memory allocated from this API with end-points and
+nothing else. To that effect the EP_Ready_For_Data and EP_Send_Packet do not
+have a buffer address argument, the buffer address is always the one return by
+Request_Buffer.
 
 ## Configuration
 

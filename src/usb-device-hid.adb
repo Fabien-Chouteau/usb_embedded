@@ -52,7 +52,7 @@ package body USB.Device.HID is
          return Not_Enough_EPs;
       end if;
 
-      This.Report_Buf := Dev.Request_Buffer ((This.EP, EP_Out),
+      This.Report_Buf := Dev.Request_Buffer ((This.EP, EP_In),
                                              UInt11 (This.Report_Size));
       if This.Report_Buf = System.Null_Address then
          return Not_Enough_EP_Buffer;
@@ -136,9 +136,9 @@ package body USB.Device.HID is
    begin
       if Index = 1 then
 
-         UDC.EP_Setup (EP       => (This.EP, EP_In),
-                       Typ      => Interrupt,
-                       Max_Size => UInt16 (This.Report_Size));
+         UDC.EP_Setup (EP  => (This.EP, EP_In),
+                       Typ => Interrupt);
+
          return Handled;
       else
          return Not_Supported;
@@ -252,11 +252,6 @@ package body USB.Device.HID is
 
       if EP = (This.EP, EP_In) then
          This.State := Idle;
-
-         --  Setup for next TX
-         UDC.EP_Setup (EP       => (This.EP, EP_In),
-                       Typ      => Interrupt,
-                       Max_Size => UInt16 (This.Report_Size));
       else
          raise Program_Error with "Not expecting transfer on EP";
       end if;
@@ -282,9 +277,7 @@ package body USB.Device.HID is
          This.Report := (others => 0);
 
          --  Send transfer buffer
-         UDC.EP_Write_Packet (This.EP,
-                              This.Report_Buf,
-                              UInt32 (This.Report_Size));
+         UDC.EP_Send_Packet (This.EP, UInt32 (This.Report_Size));
          This.State := Busy;
       end if;
    end Send_Report;

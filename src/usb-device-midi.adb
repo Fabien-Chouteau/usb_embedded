@@ -114,7 +114,6 @@ package body USB.Device.MIDI is
       USB.Logging.Device.Log_MIDI_Setup_RX;
 
       UDC.EP_Ready_For_Data (EP      => This.EP,
-                             Addr    => This.EP_Out_Buf,
                              Max_Len => EP_Buffer_Size,
                              Ready   => True);
    end Setup_RX;
@@ -150,9 +149,8 @@ package body USB.Device.MIDI is
          USB.Logging.Device.Log_MIDI_Write_Packet;
 
          --  Send IN buffer
-         UDC.EP_Write_Packet (Ep   => This.EP,
-                              Addr => This.EP_In_Buf,
-                              Len  => UInt32 (Slice (RG).Length));
+         UDC.EP_Send_Packet (Ep  => This.EP,
+                             Len => UInt32 (Slice (RG).Length));
 
          Release (This.TX_Queue, RG);
       else
@@ -384,12 +382,10 @@ package body USB.Device.MIDI is
 
       if Index = 1 then
 
-         UDC.EP_Setup (EP       => (This.EP, EP_In),
-                       Typ      => Bulk,
-                       Max_Size => EP_Buffer_Size);
-         UDC.EP_Setup (EP       => (This.EP, EP_Out),
-                       Typ      => Bulk,
-                       Max_Size => EP_Buffer_Size);
+         UDC.EP_Setup (EP  => (This.EP, EP_In),
+                       Typ => Bulk);
+         UDC.EP_Setup (EP  => (This.EP, EP_Out),
+                       Typ => Bulk);
 
          This.Setup_RX (UDC);
 

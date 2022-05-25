@@ -240,15 +240,12 @@ package body USB.Device.Serial is
 
       if Index = 1 then
 
-         UDC.EP_Setup (EP       => (This.Int_EP, EP_In),
-                       Typ      => Interrupt,
-                       Max_Size => 64);
-         UDC.EP_Setup (EP       => (This.Bulk_EP, EP_In),
-                       Typ      => Bulk,
-                       Max_Size => 64);
-         UDC.EP_Setup (EP       => (This.Bulk_EP, EP_Out),
-                       Typ      => Bulk,
-                       Max_Size => 64);
+         UDC.EP_Setup (EP  => (This.Int_EP, EP_In),
+                       Typ => Interrupt);
+         UDC.EP_Setup (EP  => (This.Bulk_EP, EP_In),
+                       Typ => Bulk);
+         UDC.EP_Setup (EP  => (This.Bulk_EP, EP_Out),
+                       Typ => Bulk);
 
          This.Setup_RX (UDC);
 
@@ -383,7 +380,6 @@ package body USB.Device.Serial is
       USB.Logging.Device.Log_Serial_Setup_RX;
 
       UDC.EP_Ready_For_Data (EP      => This.Bulk_EP,
-                             Addr    => This.Bulk_Out_Buf,
                              Max_Len => Bulk_Buffer_Size,
                              Ready   => True);
    end Setup_RX;
@@ -418,9 +414,8 @@ package body USB.Device.Serial is
          USB.Logging.Device.Log_Serial_Write_Packet;
 
          --  Send IN buffer
-         UDC.EP_Write_Packet (Ep   => This.Bulk_EP,
-                              Addr => This.Bulk_In_Buf,
-                              Len  => UInt32 (Slice (RG).Length));
+         UDC.EP_Send_Packet (Ep  => This.Bulk_EP,
+                             Len => UInt32 (Slice (RG).Length));
 
          Release (This.TX_Queue, RG);
       else

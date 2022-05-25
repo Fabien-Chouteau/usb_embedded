@@ -66,8 +66,8 @@ private
       Interface_Index : Interface_Id;
       EP : USB.EP_Id;
 
-      EP_Out_Buf    : System.Address;
-      EP_In_Buf     : System.Address;
+      EP_Out_Buf    : System.Address := System.Null_Address;
+      EP_In_Buf     : System.Address := System.Null_Address;
 
       TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
       RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);

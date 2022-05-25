@@ -41,12 +41,14 @@ package USB_Testing.UDC_Scenarios is
    procedure Basic_UDC_Test (Scenario      : aliased UDC_Stub.Stub_Scenario;
                              Expected      :         AAA.Strings.Vector;
                              RX_Data       : aliased UInt8_Array;
-                             Early_Address : Boolean := False);
+                             Early_Address : Boolean := False;
+                             Init_Verbose  : Boolean := False);
    --  Create a Basic UDC test setup (stub UDC and stub class) and run the test
 
-   procedure Two_Classes_UDC_Test (Scenario : aliased UDC_Stub.Stub_Scenario;
-                                   Expected :         AAA.Strings.Vector;
-                                   RX_Data  : aliased UInt8_Array);
+   procedure Two_Classes_UDC_Test (Scenario     : aliased UDC_Stub.Stub_Scenario;
+                                   Expected     :         AAA.Strings.Vector;
+                                   RX_Data      : aliased UInt8_Array;
+                                   Init_Verbose : Boolean := False);
    --  Create an UDC test setup with two classses and run the test
 
    -- Commonly used pieces of UDC scenario --

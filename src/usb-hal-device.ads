@@ -68,12 +68,13 @@ package USB.HAL.Device is
 
    function Request_Buffer (This          : in out USB_Device_Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11;
-                            Min_Alignment :        UInt8 := 1)
+                            Len           :        UInt11)
                             return System.Address
    is abstract;
    --  Allocate a buffer for the given End-Point, either from RAM or interal
-   --  USB Controller memory depending on the controller.
+   --  USB Controller memory depending on the controller. UDC must keep track
+   --  of the return address to perform IN/OUT transfers (see EP_Write_Packet
+   --  and EP_Ready_For_Data).
 
    function Valid_EP_Id (This : in out USB_Device_Controller;
                          EP   :        EP_Id)
@@ -82,24 +83,28 @@ package USB.HAL.Device is
    --  Return True if the given EP is valid for this UDC. This is used by the
    --  stack to know the number of EPs available.
 
-   procedure EP_Write_Packet (This : in out USB_Device_Controller;
-                              Ep   : EP_Id;
-                              Addr : System.Address;
-                              Len  : UInt32)
+   procedure EP_Send_Packet (This : in out USB_Device_Controller;
+                             Ep   :        EP_Id;
+                             Len  :        UInt32)
    is abstract;
+   --  Len has to te less than or equal to the requested buffer size. The
+   --  data to transfer is read from the previously requested EP buffer
+   --  (see Request_Buffer).
 
-   procedure EP_Setup (This     : in out USB_Device_Controller;
-                       EP       : EP_Addr;
-                       Typ      : EP_Type;
-                       Max_Size : UInt16)
+   procedure EP_Setup (This : in out USB_Device_Controller;
+                       EP   :        EP_Addr;
+                       Typ  :        EP_Type)
    is abstract;
+   --  Setup the given End-Point for the given type of transfer
 
    procedure EP_Ready_For_Data (This    : in out USB_Device_Controller;
-                                EP      : EP_Id;
-                                Addr    : System.Address;
-                                Max_Len : UInt32;
-                                Ready   : Boolean := True)
+                                EP      :        EP_Id;
+                                Max_Len :        UInt32;
+                                Ready   :        Boolean := True)
    is abstract;
+   --  Max_Len has to te less than or equal to the requested buffer size. The
+   --  transfered will be written to the previously requested EP buffer (see
+   --  Request_Buffer).
 
    procedure EP_Stall (This : in out USB_Device_Controller;
                        EP   :        EP_Addr;
@@ -107,7 +112,7 @@ package USB.HAL.Device is
    is abstract;
 
    procedure Set_Address (This : in out USB_Device_Controller;
-                          Addr : UInt7)
+                          Addr :        UInt7)
    is abstract;
 
    function Early_Address (This : USB_Device_Controller) return Boolean

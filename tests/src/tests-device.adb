@@ -32,12 +32,14 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
+        .Append ("UDC Request_Buffer ([EP_IN 0], Len => 64)")
+        .Append ("UDC Request_Buffer ([EP_OUT 0], Len => 64)")
         .Append ("UDC Initialize")
         .Append ("UDC Start")
         .Append ("UDC Poll -> RESET")
         .Append ("UDC Reset")
-        .Append ("UDC EP_Setup [EP_IN 0] Type: CONTROL Max_Size: 64")
-        .Append ("UDC EP_Setup [EP_OUT 0] Type: CONTROL Max_Size: 64")
+        .Append ("UDC EP_Setup [EP_IN 0] Type: CONTROL")
+        .Append ("UDC EP_Setup [EP_OUT 0] Type: CONTROL")
         .Append ("UDC Set_Address 0")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] TRUE")
         .Append ("UDC Reset")
@@ -55,7 +57,8 @@ package body Tests.Device is
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
                                                 RX_Data,
-                                                Early_Address => False);
+                                                Early_Address => False,
+                                                Init_Verbose  => True);
    end Device_Descriptor;
 
    -----------------------
@@ -86,9 +89,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 256 Index: 0 Len: 64")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -117,9 +117,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 5 Val: 42 Index: 0 Len: 0")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -147,9 +144,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 5 Val: 42 Index: 0 Len: 0")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -192,9 +186,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (1 .. 16 => 42);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,CLASS,DEV) Req: 42 Val: 0 Index: 0 Len: 16")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -229,9 +220,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 512 Index: 0 Len: 255")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -273,9 +261,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 769 Index: 0 Len: 255")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
@@ -351,9 +336,6 @@ package body Tests.Device is
       RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,IFACE) Req: 0 Val: 0 Index: 0 Len: 0")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")

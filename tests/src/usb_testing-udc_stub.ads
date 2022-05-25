@@ -73,7 +73,8 @@ package USB_Testing.UDC_Stub is
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
       EP_Buffers_Size   : Natural;
-      Number_Of_EPs     : EP_Id)
+      Number_Of_EPs     : EP_Id;
+      Init_Verbose      : Boolean)
    is new USB_Device_Controller
    with private;
 
@@ -85,8 +86,7 @@ package USB_Testing.UDC_Stub is
    overriding
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11;
-                            Min_Alignment :        UInt8 := 1)
+                            Len           :        UInt11)
                             return System.Address;
 
    overriding
@@ -105,21 +105,18 @@ package USB_Testing.UDC_Stub is
    function Poll (This : in out Controller) return UDC_Event;
 
    overriding
-   procedure EP_Write_Packet (This : in out Controller;
-                              Ep   : EP_Id;
-                              Addr : System.Address;
-                              Len  : UInt32);
+   procedure EP_Send_Packet (This : in out Controller;
+                             Ep   : EP_Id;
+                             Len  : UInt32);
 
    overriding
-   procedure EP_Setup (This     : in out Controller;
-                       EP       : EP_Addr;
-                       Typ      : EP_Type;
-                       Max_Size : UInt16);
+   procedure EP_Setup (This : in out Controller;
+                       EP   : EP_Addr;
+                       Typ  : EP_Type);
 
    overriding
    procedure EP_Ready_For_Data (This  : in out Controller;
                                 EP    : EP_Id;
-                                Addr : System.Address;
                                 Size  : UInt32;
                                 Ready : Boolean := True);
 
@@ -147,10 +144,10 @@ private
       NAK              : Boolean := False;
       Stall            : Boolean := False;
       Typ              : EP_Type := Control;
-      Buf              : System.Address := System.Null_Address;
-      Buf_Len          : UInt11 := 0;
-      Max_Size         : UInt16 := 0;
+      EP_Buf           : System.Address := System.Null_Address;
+      Max_Size         : UInt11 := 0;
 
+      Transfer_Len     : UInt11 := 0;
       Scenario_Waiting_For_Data : Boolean := False;
    end record;
 
@@ -169,7 +166,8 @@ private
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
       EP_Buffers_Size   : Natural;
-      Number_Of_EPs     : EP_Id)
+      Number_Of_EPs     : EP_Id;
+      Init_Verbose      : Boolean)
    is new USB_Device_Controller
    with record
 
@@ -179,7 +177,7 @@ private
       Scenario_Index : Natural := Scenario.all'First;
       RX_Index       : Natural := RX_Data.all'First;
 
-      Verbose        : Boolean := True;
+      Verbose        : Boolean := Init_Verbose;
 
       EPs            : EP_Stub_Array (0 .. 5); -- Arbitrary number of EP
 

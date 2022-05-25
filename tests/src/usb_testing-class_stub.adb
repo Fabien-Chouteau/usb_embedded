@@ -96,9 +96,8 @@ package body USB_Testing.Class_Stub is
       This.Output.Put_Line ("USB Class" & This.Number'Img &
                               " Configure Index:" & Index'Img);
 
-      UDC.EP_Setup (EP       => (This.Ep, EP_Out),
-                    Typ      => Interrupt,
-                    Max_Size => 4);
+      UDC.EP_Setup (EP  => (This.Ep, EP_Out),
+                    Typ => Interrupt);
 
       return USB.Handled;
    end Configure;

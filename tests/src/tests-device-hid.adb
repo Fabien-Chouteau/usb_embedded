@@ -53,19 +53,16 @@ package body Tests.Device.HID is
                                          Has_Early_Address => False,
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,
-                                         Number_Of_EPs     => 1);
+                                         Number_Of_EPs     => 1,
+                                         Init_Verbose      => False);
       Stack : USB.Device.USB_Device_Stack (Max_Classes => 1);
       Result : USB.Device.Init_Result;
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
-        .Append ("UDC Request_Buffer ([EP_OUT 1], Align => 1, Len => 3)")
-        .Append ("UDC Initialize")
-        .Append ("UDC Start")
-        .Append ("UDC Verbose off")
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 9 Val: 1 Index: 0 Len: 0")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
-        .Append ("UDC EP_Setup [EP_IN 1] Type: INTERRUPT Max_Size: 3")
+        .Append ("UDC EP_Setup [EP_IN 1] Type: INTERRUPT")
         .Append ("UDC EP_Write_Packet [EP_IN 0] ZLP")
         .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_IN 0] BCNT: 0")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,IFACE) Req: 6 Val: 8704 Index: 0 Len: 255")
@@ -82,17 +79,14 @@ package body Tests.Device.HID is
         .Append ("UDC EP_Write_Packet [EP_IN 1] 3 bytes")
         .Append ("0000_0000_0000_0000: 00 0A 00                                        ...")
         .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_IN 1] BCNT: 3")
-        .Append ("UDC EP_Setup [EP_IN 1] Type: INTERRUPT Max_Size: 3")
         .Append ("UDC Poll -> NONE")
         .Append ("UDC EP_Write_Packet [EP_IN 1] 3 bytes")
         .Append ("0000_0000_0000_0000: 00 00 F6                                        ...")
         .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_IN 1] BCNT: 3")
-        .Append ("UDC EP_Setup [EP_IN 1] Type: INTERRUPT Max_Size: 3")
         .Append ("UDC Poll -> NONE")
         .Append ("UDC EP_Write_Packet [EP_IN 1] 3 bytes")
         .Append ("0000_0000_0000_0000: 01 00 00                                        ...")
         .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_IN 1] BCNT: 3")
-        .Append ("UDC EP_Setup [EP_IN 1] Type: INTERRUPT Max_Size: 3")
         .Append ("UDC Poll -> NONE");
 
       S : Natural := 1;
