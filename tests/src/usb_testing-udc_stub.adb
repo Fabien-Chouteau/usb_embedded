@@ -40,7 +40,7 @@ package body USB_Testing.UDC_Stub is
 
    procedure Do_Out_Transfer (This : in out Controller'Class;
                               Ep   : EP_Id;
-                              Len  : UInt11);
+                              Len  : Packet_Size);
    -----------------
    -- Check_Event --
    -----------------
@@ -104,7 +104,7 @@ package body USB_Testing.UDC_Stub is
 
    procedure Do_Out_Transfer (This : in out Controller'Class;
                               Ep   : EP_Id;
-                              Len  : UInt11)
+                              Len  : Packet_Size)
    is
    begin
       if Len = 0 then
@@ -195,7 +195,7 @@ package body USB_Testing.UDC_Stub is
    overriding
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11)
+                            Len           :        Packet_Size)
                             return System.Address
    is
    begin
@@ -302,7 +302,7 @@ package body USB_Testing.UDC_Stub is
    overriding
    procedure EP_Send_Packet (This : in out Controller;
                              Ep   : EP_Id;
-                             Len  : UInt32)
+                             Len  : Packet_Size)
    is
       Data : UInt8_Array (1 .. Natural (Len))
         with Address => This.EPs (Ep)(EP_In).EP_Buf;
@@ -327,7 +327,7 @@ package body USB_Testing.UDC_Stub is
          raise Program_Error with "UDC Error: Trying to read from a null EP IN buffer";
       end if;
 
-      if Len > UInt32 (This.EPs (Ep) (EP_In).Max_Size) then
+      if Len > This.EPs (Ep) (EP_In).Max_Size then
          raise Program_Error with "UDC Error: Packet too big in EP_Write_Packet";
       end if;
 
@@ -336,7 +336,7 @@ package body USB_Testing.UDC_Stub is
       This.Push ((Kind => UDC_Event_E,
                   Evt  => (Kind => Transfer_Complete,
                            EP   => (Ep, EP_In),
-                           BCNT => UInt11 (Len))));
+                           BCNT => Len)));
 
    end EP_Send_Packet;
 
@@ -368,7 +368,7 @@ package body USB_Testing.UDC_Stub is
    overriding
    procedure EP_Ready_For_Data (This  : in out Controller;
                                 EP    : EP_Id;
-                                Size  : UInt32;
+                                Size  : Packet_Size;
                                 Ready : Boolean := True)
    is
    begin
@@ -381,7 +381,7 @@ package body USB_Testing.UDC_Stub is
       end if;
 
       This.EPs (EP) (EP_Out).NAK := not Ready;
-      This.EPs (EP) (EP_Out).Transfer_Len := UInt11 (Size);
+      This.EPs (EP) (EP_Out).Transfer_Len := Size;
    end EP_Ready_For_Data;
 
    --------------

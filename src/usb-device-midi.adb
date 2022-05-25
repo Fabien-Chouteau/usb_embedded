@@ -150,7 +150,7 @@ package body USB.Device.MIDI is
 
          --  Send IN buffer
          UDC.EP_Send_Packet (Ep  => This.EP,
-                             Len => UInt32 (Slice (RG).Length));
+                             Len => Packet_Size (Slice (RG).Length));
 
          Release (This.TX_Queue, RG);
       else
@@ -470,7 +470,7 @@ package body USB.Device.MIDI is
    procedure Transfer_Complete (This : in out Default_MIDI_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        Packet_Size)
    is
    begin
       if EP = (This.EP, EP_Out) then

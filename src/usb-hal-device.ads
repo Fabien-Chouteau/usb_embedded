@@ -52,7 +52,7 @@ package USB.HAL.Device is
             Req_EP : EP_Id;
          when Transfer_Complete =>
             EP   : EP_Addr;
-            BCNT : UInt11;  -- Byte count (0 .. 1024)
+            BCNT : Packet_Size;
          when others => null;
       end case;
    end record;
@@ -68,7 +68,7 @@ package USB.HAL.Device is
 
    function Request_Buffer (This          : in out USB_Device_Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11)
+                            Len           :        Packet_Size)
                             return System.Address
    is abstract;
    --  Allocate a buffer for the given End-Point, either from RAM or interal
@@ -85,7 +85,7 @@ package USB.HAL.Device is
 
    procedure EP_Send_Packet (This : in out USB_Device_Controller;
                              Ep   :        EP_Id;
-                             Len  :        UInt32)
+                             Len  :        Packet_Size)
    is abstract;
    --  Len has to te less than or equal to the requested buffer size. The
    --  data to transfer is read from the previously requested EP buffer
@@ -99,7 +99,7 @@ package USB.HAL.Device is
 
    procedure EP_Ready_For_Data (This    : in out USB_Device_Controller;
                                 EP      :        EP_Id;
-                                Max_Len :        UInt32;
+                                Max_Len :        Packet_Size;
                                 Ready   :        Boolean := True)
    is abstract;
    --  Max_Len has to te less than or equal to the requested buffer size. The

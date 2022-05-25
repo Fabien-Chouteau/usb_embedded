@@ -38,6 +38,9 @@ private with System;
 
 package USB is
 
+   type Packet_Size is range 0 .. 1024;
+   subtype Control_Packet_Size is Packet_Size range 0 .. 64;
+
    subtype EP_Id is UInt4;
 
    type EP_Dir is (EP_In, EP_Out);

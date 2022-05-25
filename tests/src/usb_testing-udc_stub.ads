@@ -86,7 +86,7 @@ package USB_Testing.UDC_Stub is
    overriding
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
-                            Len           :        UInt11)
+                            Len           :        Packet_Size)
                             return System.Address;
 
    overriding
@@ -107,7 +107,7 @@ package USB_Testing.UDC_Stub is
    overriding
    procedure EP_Send_Packet (This : in out Controller;
                              Ep   : EP_Id;
-                             Len  : UInt32);
+                             Len  : Packet_Size);
 
    overriding
    procedure EP_Setup (This : in out Controller;
@@ -117,7 +117,7 @@ package USB_Testing.UDC_Stub is
    overriding
    procedure EP_Ready_For_Data (This  : in out Controller;
                                 EP    : EP_Id;
-                                Size  : UInt32;
+                                Size  : Packet_Size;
                                 Ready : Boolean := True);
 
    overriding
@@ -145,9 +145,9 @@ private
       Stall            : Boolean := False;
       Typ              : EP_Type := Control;
       EP_Buf           : System.Address := System.Null_Address;
-      Max_Size         : UInt11 := 0;
+      Max_Size         : Packet_Size := 0;
 
-      Transfer_Len     : UInt11 := 0;
+      Transfer_Len     : Packet_Size := 0;
       Scenario_Waiting_For_Data : Boolean := False;
    end record;
 

@@ -41,7 +41,7 @@ package USB.Utils is
 
    procedure Copy (Src, Dst : System.Address; Count : Natural);
    procedure Copy (Src, Dst : System.Address; Count : HAL.UInt32);
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11);
+   procedure Copy (Src, Dst : System.Address; Count : Packet_Size);
 
    pragma Inline (Copy);
 
@@ -51,7 +51,7 @@ package USB.Utils is
 
    function Allocate (This      : in out Basic_RAM_Allocator;
                       Alignment :        UInt8;
-                      Len       :        UInt11)
+                      Len       :        Packet_Size)
                       return System.Address;
 
 private

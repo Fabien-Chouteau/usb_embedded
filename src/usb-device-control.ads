@@ -38,7 +38,7 @@ private package USB.Device.Control is
    procedure Control_In (This : in out USB_Device_Stack);
 
    procedure Control_Out (This : in out USB_Device_Stack;
-                          BCNT : UInt11);
+                          BCNT :        Packet_Size);
    --  FIXME: Is BCNT useful?
 
 private

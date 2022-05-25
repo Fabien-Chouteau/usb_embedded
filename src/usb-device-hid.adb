@@ -53,7 +53,7 @@ package body USB.Device.HID is
       end if;
 
       This.Report_Buf := Dev.Request_Buffer ((This.EP, EP_In),
-                                             UInt11 (This.Report_Size));
+                                             This.Report_Size);
       if This.Report_Buf = System.Null_Address then
          return Not_Enough_EP_Buffer;
       end if;
@@ -245,7 +245,7 @@ package body USB.Device.HID is
    procedure Transfer_Complete (This : in out Abstract_HID_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        Packet_Size)
    is
    begin
       pragma Assert (EP.Num = This.EP);
@@ -264,7 +264,7 @@ package body USB.Device.HID is
    procedure Send_Report (This : in out Abstract_HID_Class;
                           UDC  : in out USB_Device_Controller'Class)
    is
-      Report : UInt8_Array (This.Report'Range)
+      Report : Report_Data (This.Report'Range)
         with Address => This.Report_Buf;
 
    begin
@@ -277,7 +277,7 @@ package body USB.Device.HID is
          This.Report := (others => 0);
 
          --  Send transfer buffer
-         UDC.EP_Send_Packet (This.EP, UInt32 (This.Report_Size));
+         UDC.EP_Send_Packet (This.EP, This.Report_Size);
          This.State := Busy;
       end if;
    end Send_Report;

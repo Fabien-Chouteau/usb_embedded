@@ -16,8 +16,8 @@ package body Tests.Utils is
    is
       Alloc : USB.Utils.Basic_RAM_Allocator (256);
 
-      procedure Test (Alignment : UInt8;
-                      Len : UInt11;
+      procedure Test (Alignment   : UInt8;
+                      Len         : USB.Packet_Size;
                       Expect_Fail : Boolean)
       is
          Addr : constant Integer_Address :=

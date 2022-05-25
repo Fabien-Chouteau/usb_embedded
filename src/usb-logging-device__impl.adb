@@ -37,6 +37,7 @@ package body USB.Logging.Device is
 
    Event_Buffer : array (Event_Index) of Log_Event :=
      (others => (Kind  => None, ID => 0));
+   pragma Unreferenced (Event_Buffer);
 
    Index : Event_Index := Event_Index'First;
    ID    : Log_Event_ID;

@@ -259,7 +259,7 @@ package body USB.Device is
 
    function Request_Buffer (This : in out USB_Device_Stack;
                             EP   :        EP_Addr;
-                            Len  :        UInt11)
+                            Len  :        Packet_Size)
                             return System.Address
    is
    begin
@@ -316,7 +316,7 @@ package body USB.Device is
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
-      Max_Packet_Size : UInt8)
+      Max_Packet_Size : Control_Packet_Size)
       return Init_Result
    is
       use System;
@@ -335,7 +335,7 @@ package body USB.Device is
 
       This.Ctrl.EP_In_Addr := This.UDC.Request_Buffer
         (Ep  => (0, EP_In),
-         Len => UInt11 (This.Max_Packet_Size));
+         Len => This.Max_Packet_Size);
 
       if This.Ctrl.EP_In_Addr = System.Null_Address then
          return Not_Enough_EP_Buffer;
@@ -343,7 +343,7 @@ package body USB.Device is
 
       This.Ctrl.EP_Out_Addr := This.UDC.Request_Buffer
         (Ep  => (0, EP_Out),
-         Len => UInt11 (This.Max_Packet_Size));
+         Len => This.Max_Packet_Size);
 
       if This.Ctrl.EP_Out_Addr = System.Null_Address then
          return Not_Enough_EP_Buffer;
@@ -423,7 +423,7 @@ package body USB.Device is
 
    procedure Transfer_Complete (This : in out USB_Device_Stack;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        Packet_Size)
    is
       Assigned_To : Any_USB_Device_Class
       renames This.Endpoints (EP.Num).Assigned_To;
@@ -454,7 +454,7 @@ package body USB.Device is
                bDeviceClass       => 0,
                bDeviceSubClass    => 0,
                bDeviceProtocol    => 0,
-               bMaxPacketSize0    => This.Max_Packet_Size,
+               bMaxPacketSize0    => UInt8 (This.Max_Packet_Size),
                idVendor           => 16#6666#,
                idProduct          => 16#4242#,
                bcdDevice          => 16#0121#,
@@ -483,7 +483,7 @@ package body USB.Device is
                bDeviceClass       => 0,
                bDeviceSubClass    => 0,
                bDeviceProtocol    => 0,
-               bMaxPacketSize0    => This.Max_Packet_Size,
+               bMaxPacketSize0    => UInt8 (This.Max_Packet_Size),
                bNumConfigurations => 1,
                bReserved          => 0);
 

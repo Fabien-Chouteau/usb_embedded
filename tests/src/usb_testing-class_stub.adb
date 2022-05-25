@@ -148,7 +148,7 @@ package body USB_Testing.Class_Stub is
    procedure Transfer_Complete (This : in out Device_Class_Stub;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        USB.EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        USB.Packet_Size)
    is
       pragma Unreferenced (UDC);
    begin

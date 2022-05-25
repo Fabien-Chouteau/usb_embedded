@@ -156,6 +156,6 @@ private
    procedure Transfer_Complete (This : in out Default_Serial_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11);
+                                CNT  :        Packet_Size);
 
 end USB.Device.Serial;

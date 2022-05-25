@@ -332,7 +332,7 @@ package body USB.Device.Serial is
    procedure Transfer_Complete (This : in out Default_Serial_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        Packet_Size)
    is
    begin
       if EP = (This.Bulk_EP, EP_Out) then
@@ -415,7 +415,7 @@ package body USB.Device.Serial is
 
          --  Send IN buffer
          UDC.EP_Send_Packet (Ep  => This.Bulk_EP,
-                             Len => UInt32 (Slice (RG).Length));
+                             Len => Packet_Size (Slice (RG).Length));
 
          Release (This.TX_Queue, RG);
       else

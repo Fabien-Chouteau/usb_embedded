@@ -83,7 +83,7 @@ private
    type Instance
    is new Abstract_HID_Class (Keyboard_Report_Size)
    with record
-      Key_Code_Index : Natural := 0;
+      Key_Code_Index : Packet_Size := 0;
       LEDs : UInt8 := 0;
    end record;
 

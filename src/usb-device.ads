@@ -60,7 +60,7 @@ package USB.Device is
 
    function Request_Buffer (This : in out USB_Device_Stack;
                             EP   :        EP_Addr;
-                            Len  :        UInt11)
+                            Len  :        Packet_Size)
                             return System.Address
      with Pre => not This.Initialized;
    --  Allocate a buffer for the corresponding End-Point. This buffer should
@@ -88,7 +88,7 @@ package USB.Device is
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
-      Max_Packet_Size : UInt8)
+      Max_Packet_Size : Control_Packet_Size)
       return Init_Result
      with Post => (if Initialize'Result = Ok then This.Initialized);
 
@@ -147,7 +147,7 @@ package USB.Device is
    procedure Transfer_Complete (This : in out USB_Device_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11)
+                                CNT  :        Packet_Size)
    is abstract;
 
 private
@@ -219,7 +219,7 @@ private
 
       Ctrl : Control_Machine;
 
-      Max_Packet_Size : UInt8;
+      Max_Packet_Size : Control_Packet_Size := 0;
 
       Is_Init : Boolean := False;
       UDC     : Any_USB_Device_Controller := null;
@@ -261,7 +261,7 @@ private
 
    procedure Transfer_Complete (This : in out USB_Device_Stack;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11);
+                                CNT  :        Packet_Size);
 
    procedure Build_Config_Descriptor (This : in out USB_Device_Stack);
    --  Build the configuration descriptor in the control buffer from classes'

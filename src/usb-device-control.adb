@@ -39,7 +39,7 @@ package body USB.Device.Control is
 
    function Need_ZLP (Len     : Buffer_Len;
                       wLength : UInt16;
-                      EP_Size : UInt8)
+                      EP_Size : Packet_Size)
                       return Boolean;
 
    --------------
@@ -48,7 +48,7 @@ package body USB.Device.Control is
 
    function Need_ZLP (Len     : Buffer_Len;
                       wLength : UInt16;
-                      EP_Size : UInt8)
+                      EP_Size : Packet_Size)
                       return Boolean
    is (Len < Buffer_Len (wLength)
        and then
@@ -105,7 +105,7 @@ package body USB.Device.Control is
          when Last_Data_In =>
             This.Ctrl.State := Status_Out;
             This.UDC.EP_Ready_For_Data (0,
-                                        UInt32 (This.Max_Packet_Size),
+                                        This.Max_Packet_Size,
                                         True);
 
          when Status_In =>
@@ -140,7 +140,7 @@ package body USB.Device.Control is
    -----------------
 
    procedure Control_Out (This : in out USB_Device_Stack;
-                          BCNT : UInt11)
+                          BCNT :        Packet_Size)
    is
    begin
       case This.Ctrl.State is
@@ -227,11 +227,11 @@ package body USB.Device.Control is
       if Req.Length > UInt16 (This.Max_Packet_Size) then
          This.Ctrl.State := Data_Out;
          This.UDC.EP_Ready_For_Data (0,
-                                     UInt32 (This.Max_Packet_Size),
+                                     This.Max_Packet_Size,
                                      True);
       else
          This.UDC.EP_Ready_For_Data (0,
-                                     UInt32 (Req.Length),
+                                     Packet_Size (Req.Length),
                                      True);
          This.Ctrl.State := Last_Data_Out;
       end if;
@@ -451,13 +451,13 @@ package body USB.Device.Control is
 
    procedure Send_Chunk (This : in out USB_Device_Stack) is
    begin
-      if Buffer_Len (This.Max_Packet_Size) < This.Ctrl.Len then
+      if This.Ctrl.Len > Buffer_Len (This.Max_Packet_Size) then
 
          USB.Utils.Copy (Src   => This.Ctrl.Buf,
                          Dst   => This.Ctrl.EP_In_Addr,
-                         Count => UInt11 (This.Max_Packet_Size));
+                         Count => This.Max_Packet_Size);
 
-         This.UDC.EP_Send_Packet (0, UInt32 (This.Max_Packet_Size));
+         This.UDC.EP_Send_Packet (0, This.Max_Packet_Size);
 
          This.Ctrl.Buf := This.Ctrl.Buf +
            Buffer_Len (This.Max_Packet_Size);
@@ -470,9 +470,9 @@ package body USB.Device.Control is
          --  Copy data to the UDC EP buffer
          USB.Utils.Copy (Src   => This.Ctrl.Buf,
                          Dst   => This.Ctrl.EP_In_Addr,
-                         Count => UInt11 (This.Ctrl.Len));
+                         Count => Packet_Size (This.Ctrl.Len));
 
-         This.UDC.EP_Send_Packet (0, UInt32 (This.Ctrl.Len));
+         This.UDC.EP_Send_Packet (0, Packet_Size (This.Ctrl.Len));
 
          if This.Ctrl.Need_ZLP then
             This.Ctrl.State := Data_In;
@@ -498,7 +498,7 @@ package body USB.Device.Control is
       --  Copy data from the UDC EP buffer
       USB.Utils.Copy (Src   => This.Ctrl.EP_Out_Addr,
                       Dst   => This.Ctrl.Buf,
-                      Count => UInt11 (Read_Size));
+                      Count => Packet_Size (Read_Size));
 
       This.Ctrl.Len := This.Ctrl.Len + Read_Size;
       This.Ctrl.Buf := This.Ctrl.Buf + Read_Size;

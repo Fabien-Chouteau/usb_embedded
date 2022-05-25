@@ -31,7 +31,7 @@
 
 package USB.Device.HID is
 
-   type Abstract_HID_Class (Report_Size : Positive := 1)
+   type Abstract_HID_Class (Report_Size : Packet_Size := 1)
    is abstract limited new USB_Device_Class with private;
 
    type Report_Descriptor_Access is access constant UInt8_Array;
@@ -61,11 +61,13 @@ private
 
    type Class_State is (Stop, Idle, Busy);
 
-   type Abstract_HID_Class (Report_Size : Positive := 1)
+   type Report_Data is array (Packet_Size range <>) of UInt8;
+
+   type Abstract_HID_Class (Report_Size : Packet_Size := 1)
    is abstract limited new USB_Device_Class with record
       Interface_Index : Interface_Id;
       EP              : USB.EP_Id;
-      Report          : UInt8_Array (1 .. Report_Size);
+      Report          : Report_Data (1 .. Report_Size);
       Report_Buf      : System.Address := System.Null_Address;
       State           : Class_State := Stop;
       Idle_State      : UInt8 := 0;
@@ -109,6 +111,6 @@ private
    procedure Transfer_Complete (This : in out Abstract_HID_Class;
                                 UDC  : in out USB_Device_Controller'Class;
                                 EP   :        EP_Addr;
-                                CNT  :        UInt11);
+                                CNT  :        Packet_Size);
 
 end USB.Device.HID;

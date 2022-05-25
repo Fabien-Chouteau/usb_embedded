@@ -57,7 +57,7 @@ package body USB.Utils is
    -- Copy --
    ----------
 
-   procedure Copy (Src, Dst : System.Address; Count : HAL.UInt11) is
+   procedure Copy (Src, Dst : System.Address; Count : Packet_Size) is
    begin
       Copy (Src, Dst, Natural (Count));
    end Copy;
@@ -68,7 +68,7 @@ package body USB.Utils is
 
    function Allocate (This      : in out Basic_RAM_Allocator;
                       Alignment :        UInt8;
-                      Len       :        UInt11)
+                      Len       :        Packet_Size)
                       return System.Address
    is
    begin
