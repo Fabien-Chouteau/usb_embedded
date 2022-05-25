@@ -102,6 +102,19 @@ package body USB.Device.MIDI is
       This.Setup_TX (UDC);
    end Send;
 
+   --------------------------
+   -- Set_Interface_String --
+   --------------------------
+
+   procedure Set_Interface_String (This  : in out Default_MIDI_Class;
+                                   Stack : in out USB_Device_Stack'Class;
+                                   Str   :        String)
+   is
+   begin
+      This.Iface_Str := USB.Device.Register_String (Stack,
+                                                    USB.To_USB_String (Str));
+   end Set_Interface_String;
+
    --------------
    -- Setup_RX --
    --------------
@@ -229,7 +242,7 @@ package body USB.Device.MIDI is
       --  The AudioControl interface has no dedicated endpoints associated with it. It uses the
       --  default pipe (endpoint 0) for all communication purposes. Class-specific AudioControl
       --  Requests are sent using the default pipe. There is no Status Interrupt endpoint provided.
-      --  descriptor follows inline: */
+      --  descriptor follows inline:
       Data (F + 0 .. F + 91) :=
         (9, --  sizeof(usbDescrInterface): length of descriptor in bytes
          USB_DESC_TYPE_INTERFACE, --  descriptor type
@@ -239,7 +252,7 @@ package body USB.Device.MIDI is
          1, --  Class audio
          1, --  Subclass control
          0, --
-         0, --  string index for interface */
+         UInt8 (This.Iface_Str), --  string index for interface
 
          --  B.3.2 Class-specific AC Interface Descriptor
          --  The Class-specific AC interface descriptor is always headed by a Header descriptor
@@ -247,121 +260,121 @@ package body USB.Device.MIDI is
          --  the pointers needed to describe the Audio Interface Collection, associated with the
          --  described audio function. Only the Header descriptor is present in this device
          --  because it does not contain any audio functionality as such.
-         --  descriptor follows inline: */
-         9, --  sizeof(usbDescrCDC_HeaderFn): length of descriptor in bytes */
-         36, --  descriptor type */
-         1, --  header functional descriptor */
-         0, 0, --  bcdADC */
-         9, 0, --  wTotalLength */
-         1, --  */
-         1, --  */
+         --  descriptor follows inline:
+         9, --  sizeof(usbDescrCDC_HeaderFn): length of descriptor in bytes
+         36, --  descriptor type
+         1, --  header functional descriptor
+         0, 0, --  bcdADC
+         9, 0, --  wTotalLength
+         1, --
+         1, --
 
 
          --  B.4 MIDIStreaming Interface Descriptors
 
          --  B.4.1 Standard MS Interface Descriptor
-         --  descriptor follows inline: */
-         9, --  length of descriptor in bytes */
-         USB_DESC_TYPE_INTERFACE, --  descriptor type */
-         UInt8 (This.Interface_Index + 1), --  index of this interface */
-         0, --  alternate setting for this interface */
-         2, --  endpoints excl 0: number of endpoint descriptors to follow */
-         1, --  AUDIO */
-         3, --  MIDI Streaming */
-         0, --  unused */
-         0, --  string index for interface */
+         --  descriptor follows inline:
+         9, --  length of descriptor in bytes
+         USB_DESC_TYPE_INTERFACE, --  descriptor type
+         UInt8 (This.Interface_Index + 1), --  index of this interface
+         0, --  alternate setting for this interface
+         2, --  endpoints excl 0: number of endpoint descriptors to follow
+         1, --  AUDIO
+         3, --  MIDI Streaming
+         0, --  unused
+         UInt8 (This.Iface_Str), --  string index for interface
 
          --  B.4.2 Class-specific MS Interface Descriptor
-         --  descriptor follows inline: */
-         7, --  length of descriptor in bytes */
-         36, --  descriptor type */
-         1, --  header functional descriptor */
-         0, 1, --  bcdADC */
-         65, 0, --  wTotalLength */
+         --  descriptor follows inline:
+         7, --  length of descriptor in bytes
+         36, --  descriptor type
+         1, --  header functional descriptor
+         0, 1, --  bcdADC
+         65, 0, --  wTotalLength
 
          --  B.4.3 MIDI IN Jack Descriptor
-         --  descriptor follows inline: */
-         6, --  bLength */
-         36, --  descriptor type */
-         2, --  MIDI_IN_JACK desc subtype */
-         1, --  EMBEDDED bJackType */
-         1, --  bJackID */
-         0, --  iJack */
+         --  descriptor follows inline:
+         6, --  bLength
+         36, --  descriptor type
+         2, --  MIDI_IN_JACK desc subtype
+         1, --  EMBEDDED bJackType
+         1, --  bJackID
+         0, --  iJack
 
-         --  descriptor follows inline: */
-         6, --  bLength */
-         36, --  descriptor type */
-         2, --  MIDI_IN_JACK desc subtype */
-         2, --  EXTERNAL bJackType */
-         2, --  bJackID */
-         0, --  iJack */
+         --  descriptor follows inline:
+         6, --  bLength
+         36, --  descriptor type
+         2, --  MIDI_IN_JACK desc subtype
+         2, --  EXTERNAL bJackType
+         2, --  bJackID
+         0, --  iJack
 
          --  B.4.4 MIDI OUT Jack Descriptor
-         --  descriptor follows inline: */
-         9, --  length of descriptor in bytes */
-         36, --  descriptor type */
-         3, --  MIDI_OUT_JACK descriptor */
-         1, --  EMBEDDED bJackType */
-         3, --  bJackID */
-         1, --  No of input pins */
-         2, --  BaSourceID */
-         1, --  BaSourcePin */
-         0, --  iJack */
+         --  descriptor follows inline:
+         9, --  length of descriptor in bytes
+         36, --  descriptor type
+         3, --  MIDI_OUT_JACK descriptor
+         1, --  EMBEDDED bJackType
+         3, --  bJackID
+         1, --  No of input pins
+         2, --  BaSourceID
+         1, --  BaSourcePin
+         0, --  iJack
 
-         --  descriptor follows inline: */
-         9, --  bLength of descriptor in bytes */
-         36, --  bDescriptorType */
-         3, --  MIDI_OUT_JACK bDescriptorSubtype */
-         2, --  EXTERNAL bJackType */
-         4, --  bJackID */
-         1, --  bNrInputPins */
-         1, --  baSourceID (0) */
-         1, --  baSourcePin (0) */
-         0, --  iJack */
+         --  descriptor follows inline:
+         9, --  bLength of descriptor in bytes
+         36, --  bDescriptorType
+         3, --  MIDI_OUT_JACK bDescriptorSubtype
+         2, --  EXTERNAL bJackType
+         4, --  bJackID
+         1, --  bNrInputPins
+         1, --  baSourceID (0)
+         1, --  baSourcePin (0)
+         0, --  iJack
 
          --  B.5 Bulk OUT Endpoint Descriptors
 
          --  here 27 ---
 
          --  B.5.1 Standard Bulk OUT Endpoint Descriptor
-         --  descriptor follows inline: */
-         9, --  bLenght */
-         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
-         UInt8 (This.EP), --  bEndpointAddress OUT endpoint number 1 */
-         2, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint */
-         EP_Buffer_Size, 0, --  wMaxPacketSize */
-         10, --  bInterval in ms */
-         0, --  bRefresh */
-         0, --  bSyncAddress */
+         --  descriptor follows inline:
+         9, --  bLenght
+         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint
+         UInt8 (This.EP), --  bEndpointAddress OUT endpoint number 1
+         2, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint
+         EP_Buffer_Size, 0, --  wMaxPacketSize
+         10, --  bInterval in ms
+         0, --  bRefresh
+         0, --  bSyncAddress
 
          --  B.5.2 Class-specific MS Bulk OUT Endpoint Descriptor
-         --  descriptor follows inline: */
-         5, --  bLength of descriptor in bytes */
-         37, --  bDescriptorType */
-         1, --  bDescriptorSubtype */
-         1, --  bNumEmbMIDIJack  */
-         1, --  baAssocJackID (0) */
+         --  descriptor follows inline:
+         5, --  bLength of descriptor in bytes
+         37, --  bDescriptorType
+         1, --  bDescriptorSubtype
+         1, --  bNumEmbMIDIJack
+         1, --  baAssocJackID (0)
 
          --  B.6 Bulk IN Endpoint Descriptors
 
          --  B.6.1 Standard Bulk IN Endpoint Descriptor
-         --  descriptor follows inline: */
-         9, --  bLenght */
-         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint */
-         16#80# or UInt8 (This.EP), --  bEndpointAddress IN endpoint number 1 */
-         2, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint */
-         EP_Buffer_Size, 0, --  wMaxPacketSize */
-         10, --  bInterval in ms */
-         0, --  bRefresh */
-         0, --  bSyncAddress */
+         --  descriptor follows inline:
+         9, --  bLenght
+         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint
+         16#80# or UInt8 (This.EP), --  bEndpointAddress IN endpoint number 1
+         2, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint
+         EP_Buffer_Size, 0, --  wMaxPacketSize
+         10, --  bInterval in ms
+         0, --  bRefresh
+         0, --  bSyncAddress
 
          --  B.6.2 Class-specific MS Bulk IN Endpoint Descriptor
-         --  descriptor follows inline: */
-         5, --  bLength of descriptor in bytes */
-         37, --  bDescriptorType */
-         1, --  bDescriptorSubtype */
-         1, --  bNumEmbMIDIJack (0) */
-         3  --  baAssocJackID (0) */
+         --  descriptor follows inline:
+         5, --  bLength of descriptor in bytes
+         37, --  bDescriptorType
+         1, --  bDescriptorSubtype
+         1, --  bNumEmbMIDIJack (0)
+         3  --  baAssocJackID (0)
         );
 
 
@@ -371,7 +384,8 @@ package body USB.Device.MIDI is
    -- Configure --
    ---------------
 
-   overriding function Configure
+   overriding
+   function Configure
      (This  : in out Default_MIDI_Class;
       UDC   : in out USB_Device_Controller'Class;
       Index : UInt16)

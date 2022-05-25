@@ -51,6 +51,12 @@ package USB.Device.MIDI is
    procedure Send (This : in out Default_MIDI_Class;
                    UDC  : in out USB_Device_Controller'Class;
                    Evt  :        MIDI_Event);
+
+   procedure Set_Interface_String (This  : in out Default_MIDI_Class;
+                                   Stack : in out USB_Device_Stack'Class;
+                                   Str   :        String);
+   --  Only has effect when called before enumeration
+
 private
 
    type Class_State is (Stop, Idle, Data_Ready);
@@ -66,8 +72,9 @@ private
       Interface_Index : Interface_Id;
       EP : USB.EP_Id;
 
-      EP_Out_Buf    : System.Address := System.Null_Address;
-      EP_In_Buf     : System.Address := System.Null_Address;
+      EP_Out_Buf : System.Address := System.Null_Address;
+      EP_In_Buf  : System.Address := System.Null_Address;
+      Iface_Str  : USB.String_Id := Invalid_String_Id;
 
       TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
       RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
