@@ -49,7 +49,7 @@ jobs:
 
         # If this worklow was triggered by a release event, upload the release manifest as a GitHub release asset.
       - name: Upload release manifest
-        if: (github.event_name == 'release')
+        if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
