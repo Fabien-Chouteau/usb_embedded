@@ -49,7 +49,7 @@ package USB.Device is
                             Class : not null Any_USB_Device_Class)
                             return Boolean
      with Pre => not This.Initialized;
-   --  Return False if there is not space left to register the class
+   --  Return False if there is no space left to register the class
 
    function Request_Endpoint (This : in out USB_Device_Stack;
                               Typ  :        EP_Type;
