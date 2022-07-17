@@ -70,7 +70,7 @@ package body USB.Device.Control is
         Idle |
 
          --  We accept the Status_Out state here because some UDC (samdx1) will
-         --  skip the control ZLP OUT if a new setup request is recived.
+         --  skip the control ZLP OUT if a new setup request is received.
         Status_Out
       then
          raise Program_Error with "Not expecting setup in '" &
@@ -216,7 +216,7 @@ package body USB.Device.Control is
          return;
       end if;
 
-      --  Get ready to recieve the data.
+      --  Get ready to receive the data.
 
       This.Ctrl.Len := 0;
       This.Ctrl.Buf := This.Ctrl.Buffer'Address;
