@@ -87,6 +87,9 @@ package USB.Device is
    function Initialize
      (This            : in out USB_Device_Stack;
       Controller      : not null Any_USB_Device_Controller;
+      Vendor_Id       : UInt16 := 16#6666#;
+      Product_Id      : UInt16 := 16#4242#;
+      Bcd_Device      : UInt16 := 16#0121#;
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
@@ -238,6 +241,10 @@ private
       Last_String_Index : Natural := 0;
       String_Buffer : String (1 .. Max_Total_String_Chars);
       String_Indexes : String_Info_Array;
+
+      Vendor_Id  : UInt16;
+      Product_Id : UInt16;
+      Bcd_Device : UInt16;
 
       Manufacturer_Str : String_Id := Invalid_String_Id;
       Product_Str      : String_Id := Invalid_String_Id;

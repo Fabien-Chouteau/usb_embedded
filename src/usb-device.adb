@@ -313,6 +313,9 @@ package body USB.Device is
    function Initialize
      (This            : in out USB_Device_Stack;
       Controller      : not null Any_USB_Device_Controller;
+      Vendor_Id       : UInt16 := 16#6666#;
+      Product_Id      : UInt16 := 16#4242#;
+      Bcd_Device      : UInt16 := 16#0121#;
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
@@ -377,6 +380,10 @@ package body USB.Device is
       end loop;
 
       This.Initializing := null;
+
+      This.Vendor_Id  := Vendor_Id;
+      This.Product_Id := Product_Id;
+      This.Bcd_Device := Bcd_Device;
 
       --  Register mendatory strings
       This.Manufacturer_Str := This.Register_String (Manufacturer);
@@ -455,9 +462,9 @@ package body USB.Device is
                bDeviceSubClass    => 0,
                bDeviceProtocol    => 0,
                bMaxPacketSize0    => UInt8 (This.Max_Packet_Size),
-               idVendor           => 16#6666#,
-               idProduct          => 16#4242#,
-               bcdDevice          => 16#0121#,
+               idVendor           => This.Vendor_Id,
+               idProduct          => This.Product_Id,
+               bcdDevice          => This.Bcd_Device,
 
                --  String IDs
                iManufacturer      => This.Manufacturer_Str,
