@@ -37,7 +37,9 @@ package USB.Device is
 
    --  Forward declaration of Class
    type USB_Device_Class;
+   pragma Warnings (Off, "*applying 'Class to an untagged incomplete type*");
    type Any_USB_Device_Class is access all USB_Device_Class'Class;
+   pragma Warnings (On, "*applying 'Class to an untagged incomplete type*");
 
    -- Device Stack --
 
