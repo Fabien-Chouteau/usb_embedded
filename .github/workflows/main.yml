@@ -31,6 +31,7 @@ jobs:
 
         # Produce an Alire release manifest
       - name: Make Release Manifest
+        if: (github.event_name == 'release' || github.event_name == 'push')
         run: |
           # Set user GitHub login required for `alr publish`
           alr config --set --global user.github_login ${{github.repository_owner}}
@@ -41,6 +42,7 @@ jobs:
         # Save the path to the release manifest for the next step.
         # This is a little trick to get around the fact that the actions/upload-release-asset doesn't allow globing pattern.
       - name: Get Release Manifest PATH
+        if: (github.event_name == 'release' || github.event_name == 'push')
         shell: bash
         run: |
           export MANIFEST_PATHNAME=$(ls alire/releases/*.toml | head -n 1)
@@ -49,7 +51,7 @@ jobs:
 
         # If this worklow was triggered by a release event, upload the release manifest as a GitHub release asset.
       - name: Upload release manifest
-        if: (github.event_name == 'release')
+        if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
