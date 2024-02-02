@@ -87,13 +87,13 @@ package USB.Device is
    function Initialize
      (This            : in out USB_Device_Stack;
       Controller      : not null Any_USB_Device_Controller;
-      Vendor_Id       : UInt16 := 16#6666#;
-      Product_Id      : UInt16 := 16#4242#;
-      Bcd_Device      : UInt16 := 16#0121#;
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
-      Max_Packet_Size : Control_Packet_Size)
+      Max_Packet_Size : Control_Packet_Size;
+      Vendor_Id       : UInt16 := 16#6666#;
+      Product_Id      : UInt16 := 16#4242#;
+      Bcd_Device      : UInt16 := 16#0121#)
       return Init_Result
      with Post => (if Initialize'Result = Ok then This.Initialized);
 
