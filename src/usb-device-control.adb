@@ -253,7 +253,7 @@ package body USB.Device.Control is
 
       case Req.Request is
          when 0 => -- GET_STATUS
-            raise Program_Error with "GET_STATUS not implemented";
+            return Get_Status (This, Req);
          when 1 => -- CLEAR_FEATURE
             raise Program_Error with "CLEAR_FEATURE not implemented";
          when 3 => -- SET_FEATURE

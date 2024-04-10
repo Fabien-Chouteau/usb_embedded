@@ -58,6 +58,26 @@ package body USB.Device is
    end Stall_Control_EP;
 
    ----------------
+   -- Get_Status --
+   ----------------
+
+   function Get_Status (This : in out USB_Device_Stack;
+                        Req  : Setup_Data)
+                        return Setup_Request_Answer
+   is
+   begin
+      if Req.Value = 0 and then Req.Index = 0 and then Req.Length = 2 then
+         This.Ctrl.Buffer (1) := 0;  --  Reserved
+         This.Ctrl.Buffer (2) := 0;  --  B1: Remote Wakeup; B0: Self Powered
+         This.Ctrl.Buf := This.Ctrl.Buffer'Address;
+         This.Ctrl.Len := Storage_Offset (2);
+         return Handled;
+      end if;
+
+      return Not_Supported;
+   end Get_Status;
+
+   ----------------
    -- Get_String --
    ----------------
 

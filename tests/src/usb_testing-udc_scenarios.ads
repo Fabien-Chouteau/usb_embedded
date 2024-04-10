@@ -88,6 +88,18 @@ package USB_Testing.UDC_Scenarios is
        )
       );
 
+   function Get_Status (Verbose : Boolean)
+                        return UDC_Stub.Stub_Scenario
+   is (((Kind => Set_Verbose, Verbose => Verbose)
+
+        , (Kind    => UDC_Event_E,
+           Evt     => (Kind   => Setup_Request,
+                       Req    => ((Dev, 0, Stand, Device_To_Host),
+                                  0, 0, 0, 2),
+                       Req_EP => 0))
+       )
+      );
+
    function Get_Config (Verbose : Boolean)
                         return UDC_Stub.Stub_Scenario
    is (((Kind => Set_Verbose, Verbose => Verbose)

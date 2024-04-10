@@ -253,6 +253,10 @@ private
 
    procedure Stall_Control_EP (This : in out USB_Device_Stack);
 
+   function Get_Status (This  : in out USB_Device_Stack;
+                        Req  : Setup_Data)
+                        return Setup_Request_Answer;
+
    function Get_String (This  : in out USB_Device_Stack;
                         Index : String_Id)
                         return Setup_Request_Answer;

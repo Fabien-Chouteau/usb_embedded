@@ -160,6 +160,34 @@ package body Tests.Device is
                                                 Early_Address => True);
    end Set_Early_Address;
 
+   ----------------
+   -- Get_Status --
+   ----------------
+
+   procedure Get_Status (Unused : in out UDC_Stub_Fixture) is
+      Scenario : aliased constant UDC_Stub.Stub_Scenario :=
+        UDC_Scenarios.Enumeration (Verbose => False) &
+        UDC_Scenarios.Get_Status  (Verbose => True);
+
+      RX_Data : aliased constant UInt8_Array := (1 .. 2 => 0);
+
+      Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
+        .Append ("UDC Verbose on")
+        .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 0 Val: 0 Index: 0 Len: 2")
+        .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
+        .Append ("UDC EP_Write_Packet [EP_IN 0] 2 bytes")
+        .Append ("0000_0000_0000_0000: 00 00                                           ..")
+        .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_IN 0] BCNT: 2")
+        .Append ("UDC EP_Ready_For_Data [EP_OUT 0] TRUE")
+        .Append ("UDC Poll -> NONE");
+   begin
+
+      USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
+                                                Expected,
+                                                RX_Data,
+                                                Early_Address => True);
+   end Get_Status;
+
    ----------------------
    -- Control_Data_Out --
    ----------------------
@@ -365,6 +393,7 @@ begin
    Suite.Add_Test (UDC_Stub_Caller.Create ("No Status Out ZLP", No_Status_Out_ZLP'Access));
    Suite.Add_Test (UDC_Stub_Caller.Create ("Set_Address", Set_Address'Access));
    Suite.Add_Test (UDC_Stub_Caller.Create ("Set_Early_Address", Set_Early_Address'Access));
+   Suite.Add_Test (UDC_Stub_Caller.Create ("Get_Status", Get_Status'Access));
    Suite.Add_Test (UDC_Stub_Caller.Create ("Control_Data_Out", Control_Data_Out'Access));
    Suite.Add_Test (UDC_Stub_Caller.Create ("String Descriptor", String_Descriptor'Access));
    Suite.Add_Test (UDC_Stub_Caller.Create ("iface Setup Dispatch", Iface_Setup_Dispatch'Access));
