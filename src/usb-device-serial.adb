@@ -40,7 +40,8 @@ with USB.Logging.Device;
 
 package body USB.Device.Serial is
 
-   Bulk_Buffer_Size : constant := 64;
+   Irq_Buffer_Size  : constant := 64;
+   Bulk_Buffer_Size : constant := 64;  --  Linux only supports up to 64 bytes
 
    ----------------
    -- Initialize --
@@ -63,7 +64,7 @@ package body USB.Device.Serial is
       end if;
 
       This.Int_Buf := Dev.Request_Buffer ((This.Int_EP, EP_In),
-                                          Bulk_Buffer_Size);
+                                          Irq_Buffer_Size);
       if This.Int_Buf = System.Null_Address then
          return Not_Enough_EP_Buffer;
       end if;
@@ -191,7 +192,7 @@ package body USB.Device.Serial is
          USB_DESC_TYPE_ENDPOINT,
          16#80# or UInt8 (This.Int_EP), -- In EP
          3, -- Interrupt EP
-         16#40#, 0, --  TODO: Max packet size
+         Irq_Buffer_Size, 0,
          16, -- Polling interval
 
          -- CDC Control Interface --
@@ -210,7 +211,7 @@ package body USB.Device.Serial is
          USB_DESC_TYPE_ENDPOINT,
          UInt8 (This.Bulk_EP), -- Out EP
          2, -- Bulk EP
-         16#40#, 0, --  TODO: Max packet size
+         Bulk_Buffer_Size, 0,
          0, -- Polling interval
 
          -- Endpoint Data in --
@@ -218,7 +219,7 @@ package body USB.Device.Serial is
          USB_DESC_TYPE_ENDPOINT,
          16#80# or UInt8 (This.Bulk_EP), -- In EP
          2, -- Bulk EP
-         16#40#, 0, --  TODO: Max packet size
+         Bulk_Buffer_Size, 0,
          0
 
         );
