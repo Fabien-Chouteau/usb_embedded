@@ -116,7 +116,7 @@ package body USB.Device.Control is
             --  Exception: handle set address request here
             if This.Ctrl.Req.RType = (Dev, 0, Stand, Host_To_Device)
               and then
-                This.Ctrl.Req.Request = 5 -- SET_ADDRESS
+                This.Ctrl.Req.Request = Req_Set_Address'Enum_Rep
 
             then
                This.UDC.Set_Address (UInt7 (This.Ctrl.Req.Value and 16#7F#));
@@ -252,21 +252,21 @@ package body USB.Device.Control is
       end if;
 
       case Req.Request is
-         when 0 => -- GET_STATUS
+         when Req_Get_Status'Enum_Rep =>
             return Get_Status (This, Req);
-         when 1 => -- CLEAR_FEATURE
+         when Req_Clear_Feature'Enum_Rep =>
             raise Program_Error with "CLEAR_FEATURE not implemented";
-         when 3 => -- SET_FEATURE
+         when Req_Set_Feature'Enum_Rep =>
             raise Program_Error with "SET_FEATURE not implemented";
-         when 5 => -- SET_ADDRESS
+         when Req_Set_Address'Enum_Rep =>
             return Set_Address (This, Req);
-         when 6 => -- GET_DESCRIPTOR
+         when Req_Get_Descriptor'Enum_Rep =>
             return Get_Descriptor (This, Req);
-         when 7 => -- SET_DESCRIPTOR
+         when Req_Set_Descriptor'Enum_Rep =>
             raise Program_Error with "SET_DESCRIPTOR not implemented";
-         when 8 => -- GET_CONFIGURATION
+         when Req_Get_Configuration'Enum_Rep =>
             raise Program_Error with "GET_CONFIGURATION not implemented";
-         when 9 => -- SET_CONFIGURATION
+         when Req_Set_Configuration'Enum_Rep =>
             return Set_Configuration (This, Req);
          when others =>
             return Not_Supported;
@@ -289,10 +289,10 @@ package body USB.Device.Control is
       EP : constant EP_Addr := (Id, Dir);
    begin
       case Req.Request is
-         when 0 => -- GET_STATUS
+         when Req_Get_Status'Enum_Rep =>
             raise Program_Error with "EP GET_STATUS not implemented";
 
-         when 1 => -- CLEAR_FEATURE
+         when Req_Clear_Feature'Enum_Rep =>
             case Req.Value is
                when 0 => -- HALT ENDPOINT
                   This.UDC.EP_Stall (EP, False);
@@ -301,7 +301,7 @@ package body USB.Device.Control is
                   raise Program_Error with "Invalid EP CLEAR_FEATURE";
             end case;
 
-         when 3 => -- SET_FEATURE
+         when Req_Set_Feature'Enum_Rep =>
             case Req.Value is
                when 0 => -- HALT ENDPOINT
                   This.UDC.EP_Stall (EP, True);
@@ -310,7 +310,7 @@ package body USB.Device.Control is
                   raise Program_Error with "Invalid EP SET_FEATURE";
             end case;
 
-         when 16#12# => -- SYNCH_FRAME
+         when Req_Sync_Feature'Enum_Rep =>
             raise Program_Error with "EP SYNCH_FEATURE not implemented";
 
          when others =>

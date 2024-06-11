@@ -37,6 +37,15 @@ package body USB.Device.HID is
 
    subtype Dispatch is Abstract_HID_Class'Class;
 
+   type Class_Request_Type is
+     (Get_Report, Get_Idle, Get_Protocol, Set_Report, Set_Idle, Set_Protocol);
+   for Class_Request_Type use (Get_Report   => 1,
+                               Get_Idle     => 2,
+                               Get_Protocol => 3,
+                               Set_Report   => 9,
+                               Set_Idle     => 10,
+                               Set_Protocol => 11);
+
    ----------------
    -- Initialize --
    ----------------
@@ -89,17 +98,16 @@ package body USB.Device.HID is
    is
       F : constant Natural := Data'First;
 
-      USB_DESC_TYPE_INTERFACE     : constant := 4;
-      USB_DESC_TYPE_ENDPOINT      : constant := 5;
+      USB_CLASS_HID : constant := 3;
 
    begin
       Data (F + 0 .. F + 24) :=
         (9,
-         USB_DESC_TYPE_INTERFACE,
+         Dt_Interface'Enum_Rep,
          0, --  This.Interface_Index,
          0, -- Alternate setting
          1, -- Number of endpoints
-         3, -- Class HID
+         USB_CLASS_HID, -- Class HID
          0, -- Subclass
          0, -- Interface protocol 0=none, 1=keyboard, 2=mouse
          0, -- Str
@@ -114,9 +122,9 @@ package body USB.Device.HID is
          Dispatch (This).Report_Descriptor'Length, 0, -- Descriptor length
 
          7,
-         USB_DESC_TYPE_ENDPOINT,
+         Dt_Endpoint'Enum_Rep,
          16#80# or UInt8 (This.EP), -- In EP
-         3, -- Interrupt EP
+         Interrupt'Enum_Rep, -- Interrupt EP
          16#40#, 0, --  TODO: Max packet size
          1 -- Polling interval
         );
@@ -162,11 +170,11 @@ package body USB.Device.HID is
 
       if Req.RType.Typ = Class and then Req.RType.Recipient = Iface then
          case Req.Request is
-         when 1 => -- GET_REPORT
+         when Get_Report'Enum_Rep =>
             return Not_Supported;
-         when 2 => -- GET_IDLE
+         when Get_Idle'Enum_Rep =>
             return Not_Supported;
-         when 3 => -- GET_PROTOCOL
+         when Get_Protocol'Enum_Rep =>
             return Not_Supported;
          when others =>
             raise Program_Error with "Unknown HID request";
@@ -175,7 +183,7 @@ package body USB.Device.HID is
 
       if Req.RType.Typ = Stand
         and then
-          Req.Request = 6 -- GET_DESCRIPTOR
+          Req.Request = Req_Get_Descriptor'Enum_Rep
       then
          declare
 --              Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
@@ -217,17 +225,17 @@ package body USB.Device.HID is
    begin
       if Req.RType.Typ = Class and then Req.RType.Recipient = Iface then
          case Req.Request is
-         when 9 => -- SET_REPORT
+         when Set_Report'Enum_Rep =>
             declare
                Typ : constant UInt8 := Utils.High (Req.Value);
                ID  : constant UInt8 := Utils.Low (Req.Value);
             begin
                return Dispatch (This).Set_Report (Typ, ID, Data);
             end;
-         when 10 => -- SET_IDLE
+         when Set_Idle'Enum_Rep =>
             This.Idle_State := Utils.High (Req.Value);
             return Handled;
-         when 11 => -- SET_PROTOCOL
+         when Set_Protocol'Enum_Rep =>
             return Not_Supported;
          when others =>
             raise Program_Error with "Unknown HID request";
