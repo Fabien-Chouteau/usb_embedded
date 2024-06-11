@@ -436,7 +436,7 @@ package body USB.Device.MIDI is
          when 9 => -- SET_REPORT
             return Not_Supported;
          when 10 => -- SET_IDLE
-            This.Idle_State := UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+            This.Idle_State := USB.Utils.High (Req.Value);
             return Handled;
          when 11 => -- SET_PROTOCOL
             return Not_Supported;
@@ -450,9 +450,8 @@ package body USB.Device.MIDI is
           Req.Request = 6 -- GET_DESCRIPTOR
       then
          declare
-            --  Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
-            Desc_Type : constant UInt8 :=
-              UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+            --  Index     : constant UInt8 := USB.Utils.Low (Req.Value);
+            Desc_Type : constant UInt8 := USB.Utils.High (Req.Value);
 
          begin
             case Desc_Type is

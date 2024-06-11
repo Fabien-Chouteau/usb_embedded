@@ -36,6 +36,8 @@ with USB.Device.Control;
 
 with USB.Logging.Device;
 
+with USB.Utils;
+
 package body USB.Device is
 
    procedure Put_Line (Str : String);
@@ -132,9 +134,8 @@ package body USB.Device is
                             Req  : Setup_Data)
                             return Setup_Request_Answer
    is
-      Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
-      Desc_Type : constant UInt8 :=
-        UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+      Index     : constant UInt8 := Utils.Low (Req.Value);
+      Desc_Type : constant UInt8 := Utils.High (Req.Value);
    begin
 
       case Desc_Type is
