@@ -159,8 +159,7 @@ package body USB.Device is
             return Handled;
 
          when others =>
-            raise Program_Error with "Descriptor not implemented " &
-              Desc_Type'Img;
+            Put_Line ("Descriptor not implemented:" & Desc_Type'Img);
             return Not_Supported;
       end case;
    end Get_Descriptor;
