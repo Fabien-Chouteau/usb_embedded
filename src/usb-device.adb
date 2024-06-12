@@ -36,6 +36,8 @@ with USB.Device.Control;
 
 with USB.Logging.Device;
 
+with USB.Utils;
+
 package body USB.Device is
 
    procedure Put_Line (Str : String);
@@ -94,7 +96,7 @@ package body USB.Device is
 
       if Index = 0 then
          This.Ctrl.Buffer (1) := 4; -- bLength
-         This.Ctrl.Buffer (2) := 3; -- bDescriptorType (String)
+         This.Ctrl.Buffer (2) := Dt_String'Enum_Rep; -- 0x03
 
          --  LANG_EN_US
          This.Ctrl.Buffer (3) := ASCII.HT'Enum_Rep;  -- 0x04
@@ -115,7 +117,7 @@ package body USB.Device is
            with Address => This.Ctrl.Buffer (3)'Address;
       begin
          This.Ctrl.Buffer (1) := UInt8 (Len + 2); -- bLength
-         This.Ctrl.Buffer (2) := 3; -- bDescriptorType (String)
+         This.Ctrl.Buffer (2) := Dt_String'Enum_Rep;
          Dst := This.String_Buffer (Info.From .. Info.To);
       end;
 
@@ -132,28 +134,26 @@ package body USB.Device is
                             Req  : Setup_Data)
                             return Setup_Request_Answer
    is
-      Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
-      Desc_Type : constant UInt8 :=
-        UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+      Index     : constant UInt8 := Utils.Low (Req.Value);
+      Desc_Type : constant UInt8 := Utils.High (Req.Value);
    begin
 
       case Desc_Type is
-         when 1 => -- DT_DEVICE
+         when Dt_Device'Enum_Rep =>
             Put_Line ("DT_DEVICE");
             This.Build_Device_Descriptor;
             return Handled;
 
-         when 2 => -- DT_CONFIGURATION
+         when Dt_Configuration'Enum_Rep =>
             Put_Line ("DT_CONFIGURATION");
             This.Build_Config_Descriptor;
             return Handled;
 
-         when 3 => -- DT_STRING
+         when Dt_String'Enum_Rep =>
             Put_Line ("DT_STRING");
             return Get_String (This, String_Id (Index));
 
-         when 6 => -- DT_QUALIFIER
-
+         when Dt_Qualifier'Enum_Rep =>
             Put_Line ("DT_QUALIFIER");
             This.Build_Device_Qualifier;
             return Handled;
@@ -476,7 +476,7 @@ package body USB.Device is
         with Address => This.Ctrl.Buffer'Address;
    begin
       Desc := (bLength            => Desc'Size / 8,
-               bDescriptorType    => 1, -- DT_DEVICE
+               bDescriptorType    => Dt_Device'Enum_Rep,
                bcdUSB             => 16#0110#,
                bDeviceClass       => 0,
                bDeviceSubClass    => 0,
@@ -505,7 +505,7 @@ package body USB.Device is
         with Address => This.Ctrl.Buffer'Address;
    begin
       Desc := (bLength            => Desc'Size / 8,
-               bDescriptorType    => 6, -- DT_QUALIFIER
+               bDescriptorType    => Dt_Qualifier'Enum_Rep,
                bcdUSB             => 16#0200#,
                bDeviceClass       => 0,
                bDeviceSubClass    => 0,
