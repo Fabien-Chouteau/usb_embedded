@@ -159,8 +159,7 @@ package body USB.Device is
             return Handled;
 
          when others =>
-            raise Program_Error with "Descriptor not implemented " &
-              Desc_Type'Img;
+            Put_Line ("Descriptor not implemented:" & Desc_Type'Img);
             return Not_Supported;
       end case;
    end Get_Descriptor;
@@ -176,14 +175,10 @@ package body USB.Device is
    begin
       This.Dev_Addr := UInt7 (Req.Value and 16#7F#);
 
-      if Verbose then
-         Put_Line ("Set Address: " & This.Dev_Addr'Img);
-      end if;
+      Put_Line ("Set Address: " & This.Dev_Addr'Img);
 
       if This.UDC.Early_Address then
-         if Verbose then
-            Put_Line ("Set early Address: " & This.Dev_Addr'Img);
-         end if;
+         Put_Line ("Set early Address: " & This.Dev_Addr'Img);
 
          --  The DWC OTG USB requires the address to be set at this point...
          This.UDC.Set_Address (This.Dev_Addr);
