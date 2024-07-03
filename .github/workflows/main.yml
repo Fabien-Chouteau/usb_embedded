@@ -18,10 +18,10 @@ jobs:
 
     steps:
         # Check-out the repository
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
         # Install and setup Alire package manager
-      - uses: alire-project/setup-alire@v1
+      - uses: alire-project/setup-alire@v3
 
         # Build the project using the validation build profile to enforce static analysis and coding style.
       - run: alr build --validation
