@@ -41,6 +41,15 @@ package body USB.Device.MIDI is
 
    EP_Buffer_Size : constant := 64;
 
+   type Class_Request_Type is
+     (Get_Report, Get_Idle, Get_Protocol, Set_Report, Set_Idle, Set_Protocol);
+   for Class_Request_Type use (Get_Report   => 1,
+                               Get_Idle     => 2,
+                               Get_Protocol => 3,
+                               Set_Report   => 9,
+                               Set_Idle     => 10,
+                               Set_Protocol => 11);
+
    -------------
    -- Receive --
    -------------
@@ -231,9 +240,8 @@ package body USB.Device.MIDI is
                                      Data :    out UInt8_Array)
    is
       F : constant Natural := Data'First;
-      USB_DESC_TYPE_INTERFACE     : constant := 4;
-      USB_DESC_TYPE_ENDPOINT      : constant := 5;
 
+      USB_CLASS_AUDIO : constant := 1;
    begin
 
       pragma Style_Checks (Off);
@@ -245,11 +253,11 @@ package body USB.Device.MIDI is
       --  descriptor follows inline:
       Data (F + 0 .. F + 91) :=
         (9, --  sizeof(usbDescrInterface): length of descriptor in bytes
-         USB_DESC_TYPE_INTERFACE, --  descriptor type
+         Dt_Interface'Enum_Rep, --  descriptor type
          UInt8 (This.Interface_Index), --  index of this interface
          0, --  alternate setting for this interface
          0, --  endpoints excl 0: number of endpoint descriptors to follow
-         1, --  Class audio
+         USB_CLASS_AUDIO, --  Class audio
          1, --  Subclass control
          0, --
          UInt8 (This.Iface_Str), --  string index for interface
@@ -275,11 +283,11 @@ package body USB.Device.MIDI is
          --  B.4.1 Standard MS Interface Descriptor
          --  descriptor follows inline:
          9, --  length of descriptor in bytes
-         USB_DESC_TYPE_INTERFACE, --  descriptor type
+         Dt_Interface'Enum_Rep, --  descriptor type
          UInt8 (This.Interface_Index + 1), --  index of this interface
          0, --  alternate setting for this interface
          2, --  endpoints excl 0: number of endpoint descriptors to follow
-         1, --  AUDIO
+         USB_CLASS_AUDIO, --  AUDIO
          3, --  MIDI Streaming
          0, --  unused
          UInt8 (This.Iface_Str), --  string index for interface
@@ -339,9 +347,9 @@ package body USB.Device.MIDI is
          --  B.5.1 Standard Bulk OUT Endpoint Descriptor
          --  descriptor follows inline:
          9, --  bLenght
-         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint
+         Dt_Endpoint'Enum_Rep, --  bDescriptorType = endpoint
          UInt8 (This.EP), --  bEndpointAddress OUT endpoint number 1
-         2, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint
+         Bulk'Enum_Rep, --  bmAttributes: 2:Bulk, 3:Interrupt endpoint
          EP_Buffer_Size, 0, --  wMaxPacketSize
          10, --  bInterval in ms
          0, --  bRefresh
@@ -360,9 +368,9 @@ package body USB.Device.MIDI is
          --  B.6.1 Standard Bulk IN Endpoint Descriptor
          --  descriptor follows inline:
          9, --  bLenght
-         USB_DESC_TYPE_ENDPOINT, --  bDescriptorType = endpoint
+         Dt_Endpoint'Enum_Rep, --  bDescriptorType = endpoint
          16#80# or UInt8 (This.EP), --  bEndpointAddress IN endpoint number 1
-         2, --  bmAttributes: 2: Bulk, 3: Interrupt endpoint
+         Bulk'Enum_Rep, --  Bulk EP
          EP_Buffer_Size, 0, --  wMaxPacketSize
          10, --  bInterval in ms
          0, --  bRefresh
@@ -427,18 +435,18 @@ package body USB.Device.MIDI is
 
       if Req.RType.Typ = Class and then Req.RType.Recipient = Iface then
          case Req.Request is
-         when 1 => -- GET_REPORT
+         when Get_Report'Enum_Rep =>
             return Not_Supported;
-         when 2 => -- GET_IDLE
+         when Get_Idle'Enum_Rep =>
             return Not_Supported;
-         when 3 => -- GET_PROTOCOL
+         when Get_Protocol'Enum_Rep =>
             return Not_Supported;
-         when 9 => -- SET_REPORT
+         when Set_Report'Enum_Rep =>
             return Not_Supported;
-         when 10 => -- SET_IDLE
-            This.Idle_State := UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+         when Set_Idle'Enum_Rep =>
+            This.Idle_State := Utils.High (Req.Value);
             return Handled;
-         when 11 => -- SET_PROTOCOL
+         when Set_Protocol'Enum_Rep =>
             return Not_Supported;
          when others =>
             return Next_Callback;
@@ -447,12 +455,11 @@ package body USB.Device.MIDI is
 
       if Req.RType.Typ = Stand
         and then
-          Req.Request = 6 -- GET_DESCRIPTOR
+          Req.Request = Req_Get_Descriptor'Enum_Rep
       then
          declare
-            --  Index     : constant UInt8 := UInt8 (Req.Value and 16#FF#);
-            Desc_Type : constant UInt8 :=
-              UInt8 (Shift_Right (Req.Value, 8) and 16#FF#);
+            --  Index     : constant UInt8 := Utils.Low (Req.Value);
+            Desc_Type : constant UInt8 := Utils.High (Req.Value);
 
          begin
             case Desc_Type is

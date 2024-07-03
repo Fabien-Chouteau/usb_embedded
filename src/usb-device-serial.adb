@@ -40,7 +40,15 @@ with USB.Logging.Device;
 
 package body USB.Device.Serial is
 
-   Bulk_Buffer_Size : constant := 64;
+   Irq_Buffer_Size  : constant := 64;
+   Bulk_Buffer_Size : constant := 64;  --  Linux only supports up to 64 bytes
+
+   type Class_Request_Type is
+     (Set_Line_Coding, Get_Line_Coding, Set_Control_Line_State, Send_Break);
+   for Class_Request_Type use (Set_Line_Coding        => 16#20#,
+                               Get_Line_Coding        => 16#21#,
+                               Set_Control_Line_State => 16#22#,
+                               Send_Break             => 16#23#);
 
    ----------------
    -- Initialize --
@@ -63,7 +71,7 @@ package body USB.Device.Serial is
       end if;
 
       This.Int_Buf := Dev.Request_Buffer ((This.Int_EP, EP_In),
-                                          Bulk_Buffer_Size);
+                                          Irq_Buffer_Size);
       if This.Int_Buf = System.Null_Address then
          return Not_Enough_EP_Buffer;
       end if;
@@ -125,9 +133,6 @@ package body USB.Device.Serial is
    is
       F : constant Natural := Data'First;
 
-      USB_DESC_TYPE_INTERFACE     : constant := 4;
-      USB_DESC_TYPE_ENDPOINT      : constant := 5;
-      USB_DESC_CS_INTERFACE       : constant := 16#24#;
       USB_CLASS_CDC : constant := 2;
       USB_CLASS_CDC_DATA : constant := 10;
       CDC_COMM_SUBCLASS_ABSTRACT_CONTROL_MODEL : constant := 2;
@@ -140,7 +145,7 @@ package body USB.Device.Serial is
         (
          -- Interface Associate --
          8, -- bLength
-         16#0B#, -- bDescriptorType 0x0B
+         Dt_Interface_Associate'Enum_Rep, -- bDescriptorType
          UInt8 (This.Interface_Index), -- bFirstInterface
          2, -- bInterfaceCount
          USB_CLASS_CDC, -- bFunctionClass
@@ -150,7 +155,7 @@ package body USB.Device.Serial is
 
          -- CDC Control Interface --
          9, -- bLength
-         USB_DESC_TYPE_INTERFACE, -- bDescriptorType
+         Dt_Interface'Enum_Rep, -- bDescriptorType
          UInt8 (This.Interface_Index), -- bInterfaceNumber
          0, -- bAlternateSetting
          1, -- bNumEndpoints
@@ -161,42 +166,42 @@ package body USB.Device.Serial is
 
          -- CDC Header --
          5,
-         USB_DESC_CS_INTERFACE,
+         Dt_Cs_Interface'Enum_Rep,
          CDC_FUNC_DESC_HEADER,
          16#20#,
          16#01#,
 
          -- CDC Call --
          5,
-         USB_DESC_CS_INTERFACE,
+         Dt_Cs_Interface'Enum_Rep,
          CDC_FUNC_DESC_CALL_MANAGEMENT,
          0,
          UInt8 (This.Interface_Index + 1),
 
          -- CDC ACM: support line request --
          4,
-         USB_DESC_CS_INTERFACE,
+         Dt_Cs_Interface'Enum_Rep,
          CDC_FUNC_DESC_ABSTRACT_CONTROL_MANAGEMENT,
          2,
 
          -- CDC Union --
          5,
-         USB_DESC_CS_INTERFACE,
+         Dt_Cs_Interface'Enum_Rep,
          CDC_FUNC_DESC_UNION,
          UInt8 (This.Interface_Index),
          UInt8 (This.Interface_Index + 1),
 
          -- Endpoint Notification --
          7,
-         USB_DESC_TYPE_ENDPOINT,
+         Dt_Endpoint'Enum_Rep,
          16#80# or UInt8 (This.Int_EP), -- In EP
-         3, -- Interrupt EP
-         16#40#, 0, --  TODO: Max packet size
+         Interrupt'Enum_Rep, -- Interrupt EP
+         Irq_Buffer_Size, 0,
          16, -- Polling interval
 
          -- CDC Control Interface --
          9, -- bLength
-         USB_DESC_TYPE_INTERFACE, -- bDescriptorType
+         Dt_Interface'Enum_Rep, -- bDescriptorType
          UInt8 (This.Interface_Index + 1), -- bInterfaceNumber
          0, -- bAlternateSetting
          2, -- bNumEndpoints
@@ -207,18 +212,18 @@ package body USB.Device.Serial is
 
          -- Endpoint Data out --
          7,
-         USB_DESC_TYPE_ENDPOINT,
+         Dt_Endpoint'Enum_Rep,
          UInt8 (This.Bulk_EP), -- Out EP
-         2, -- Bulk EP
-         16#40#, 0, --  TODO: Max packet size
+         Bulk'Enum_Rep, -- Bulk EP
+         Bulk_Buffer_Size, 0,
          0, -- Polling interval
 
          -- Endpoint Data in --
          7,
-         USB_DESC_TYPE_ENDPOINT,
+         Dt_Endpoint'Enum_Rep,
          16#80# or UInt8 (This.Bulk_EP), -- In EP
-         2, -- Bulk EP
-         16#40#, 0, --  TODO: Max packet size
+         Bulk'Enum_Rep, -- Bulk EP
+         Bulk_Buffer_Size, 0,
          0
 
         );
@@ -272,7 +277,7 @@ package body USB.Device.Serial is
 
       if Req.RType.Typ = Class and then Req.RType.Recipient = Iface then
          case Req.Request is
-         when 16#21# => -- GET_LINE_CODING
+         when Get_Line_Coding'Enum_Rep =>
             Buf := This.Coding'Address;
             Len := This.Coding'Size / 8;
             return Handled;
@@ -297,7 +302,7 @@ package body USB.Device.Serial is
    begin
       if Req.RType.Typ = Class and then Req.RType.Recipient = Iface then
          case Req.Request is
-         when 16#20# => -- SET_LINE_CODING
+         when Set_Line_Coding'Enum_Rep =>
             if Data'Length = (This.Coding'Size / 8) then
                declare
                   Dst : UInt8_Array (1 .. This.Coding'Size / 8)
@@ -309,11 +314,11 @@ package body USB.Device.Serial is
             else
                return Not_Supported;
             end if;
-         when 16#22# => -- SET_CONTROL_LINE_STATE
+         when Set_Control_Line_State'Enum_Rep =>
             This.State.DTE_Is_Present := (Req.Value and 1) /= 0;
             This.State.Half_Duplex_Carrier_control := (Req.Value and 2) /= 0;
             return Handled;
-         when 16#23# => -- SEND_BREAK
+         when Send_Break'Enum_Rep =>
             --  TODO: Break are ignored for now...
             return Handled;
          when others =>

@@ -71,9 +71,9 @@ package USB.HAL.Device is
                             Len           :        Packet_Size)
                             return System.Address
    is abstract;
-   --  Allocate a buffer for the given End-Point, either from RAM or interal
+   --  Allocate a buffer for the given End-Point, either from RAM or internal
    --  USB Controller memory depending on the controller. UDC must keep track
-   --  of the return address to perform IN/OUT transfers (see EP_Write_Packet
+   --  of the return address to perform IN/OUT transfers (see EP_Send_Packet
    --  and EP_Ready_For_Data).
 
    function Valid_EP_Id (This : in out USB_Device_Controller;
@@ -87,7 +87,7 @@ package USB.HAL.Device is
                              Ep   :        EP_Id;
                              Len  :        Packet_Size)
    is abstract;
-   --  Len has to te less than or equal to the requested buffer size. The
+   --  Len has to be less than or equal to the requested buffer size. The
    --  data to transfer is read from the previously requested EP buffer
    --  (see Request_Buffer).
 
@@ -102,9 +102,9 @@ package USB.HAL.Device is
                                 Max_Len :        Packet_Size;
                                 Ready   :        Boolean := True)
    is abstract;
-   --  Max_Len has to te less than or equal to the requested buffer size. The
-   --  transfered will be written to the previously requested EP buffer (see
-   --  Request_Buffer).
+   --  Max_Len has to be less than or equal to the requested buffer size. The
+   --  transfered data will be written to the previously requested EP buffer
+   --  (see Request_Buffer).
 
    procedure EP_Stall (This : in out USB_Device_Controller;
                        EP   :        EP_Addr;

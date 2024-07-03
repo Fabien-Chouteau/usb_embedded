@@ -82,6 +82,20 @@ package USB is
       Dir : Data_Phase_Transfer_Direction;
    end record with Pack, Size => 8;
 
+   type Stand_Request_Type is
+     (Req_Get_Status, Req_Clear_Feature, Req_Set_Feature, Req_Set_Address,
+      Req_Get_Descriptor, Req_Set_Descriptor, Req_Get_Configuration,
+      Req_Set_Configuration, Req_Sync_Feature);
+   for Stand_Request_Type use (Req_Get_Status        => 16#00#,
+                               Req_Clear_Feature     => 16#01#,
+                               Req_Set_Feature       => 16#03#,
+                               Req_Set_Address       => 16#05#,
+                               Req_Get_Descriptor    => 16#06#,
+                               Req_Set_Descriptor    => 16#07#,
+                               Req_Get_Configuration => 16#08#,
+                               Req_Set_Configuration => 16#09#,
+                               Req_Sync_Feature      => 16#12#);
+
    type Setup_Data is record
       RType   : Request_Type;
       Request : UInt8;
@@ -106,6 +120,18 @@ package USB is
 
    type Lang_ID is new UInt16;
    type Interface_Id is new UInt8;
+
+   type Descriptor_Type is
+     (Dt_Device, Dt_Configuration, Dt_String, Dt_Interface, Dt_Endpoint,
+      Dt_Qualifier, Dt_Interface_Associate, Dt_Cs_Interface);
+   for Descriptor_Type use (Dt_Device              => 16#01#,
+                            Dt_Configuration       => 16#02#,
+                            Dt_String              => 16#03#,
+                            Dt_Interface           => 16#04#,
+                            Dt_Endpoint            => 16#05#,
+                            Dt_Qualifier           => 16#06#,
+                            Dt_Interface_Associate => 16#0B#,
+                            Dt_Cs_Interface        => 16#24#);
 
    type Device_Descriptor is record
       bLength            : UInt8;

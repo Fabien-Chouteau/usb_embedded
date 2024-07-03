@@ -37,7 +37,9 @@ package USB.Device is
 
    --  Forward declaration of Class
    type USB_Device_Class;
+   pragma Warnings (Off, "*applying 'Class to an untagged incomplete type*");
    type Any_USB_Device_Class is access all USB_Device_Class'Class;
+   pragma Warnings (On, "*applying 'Class to an untagged incomplete type*");
 
    -- Device Stack --
 
@@ -49,7 +51,7 @@ package USB.Device is
                             Class : not null Any_USB_Device_Class)
                             return Boolean
      with Pre => not This.Initialized;
-   --  Return False if there is not space left to register the class
+   --  Return False if there is no space left to register the class
 
    function Request_Endpoint (This : in out USB_Device_Stack;
                               Typ  :        EP_Type;
@@ -88,7 +90,10 @@ package USB.Device is
       Manufacturer    : USB_String;
       Product         : USB_String;
       Serial_Number   : USB_String;
-      Max_Packet_Size : Control_Packet_Size)
+      Max_Packet_Size : Control_Packet_Size;
+      Vendor_Id       : UInt16 := 16#6666#;
+      Product_Id      : UInt16 := 16#4242#;
+      Bcd_Device      : UInt16 := 16#0121#)
       return Init_Result
      with Post => (if Initialize'Result = Ok then This.Initialized);
 
@@ -237,12 +242,20 @@ private
       String_Buffer : String (1 .. Max_Total_String_Chars);
       String_Indexes : String_Info_Array;
 
+      Vendor_Id  : UInt16;
+      Product_Id : UInt16;
+      Bcd_Device : UInt16;
+
       Manufacturer_Str : String_Id := Invalid_String_Id;
       Product_Str      : String_Id := Invalid_String_Id;
       Serial_Str       : String_Id := Invalid_String_Id;
    end record;
 
    procedure Stall_Control_EP (This : in out USB_Device_Stack);
+
+   function Get_Status (This  : in out USB_Device_Stack;
+                        Req  : Setup_Data)
+                        return Setup_Request_Answer;
 
    function Get_String (This  : in out USB_Device_Stack;
                         Index : String_Id)
