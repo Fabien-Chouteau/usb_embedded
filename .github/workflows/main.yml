@@ -37,7 +37,7 @@ jobs:
           alr config --set --global user.github_login ${{github.repository_owner}}
 
           # Run Alire publish assistant
-          alr publish ${{github.server_url}}/${{github.repository}} ${{github.sha}}
+          alr publish --skip-submit ${{github.server_url}}/${{github.repository}} ${{github.sha}}
 
         # Save the path to the release manifest for the next step.
         # This is a little trick to get around the fact that the actions/upload-release-asset doesn't allow globing pattern.
