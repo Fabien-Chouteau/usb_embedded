@@ -29,7 +29,6 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
-with AUnit.Assertions;
 with USB.Device; use USB.Device;
 with USB_Testing.Class_Stub;
 with USB_Testing.Output;
@@ -63,7 +62,7 @@ package body USB_Testing.UDC_Scenarios is
       Result : USB.Device.Init_Result;
    begin
 
-      AUnit.Assertions.Assert
+      pragma Assert
         (Ctrl.Register_Class (Class'Unchecked_Access),
          "USB STACK register class failed");
 
@@ -74,7 +73,7 @@ package body USB_Testing.UDC_Scenarios is
          Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
 
-      AUnit.Assertions.Assert
+      pragma Assert
         (Result = Ok, "USB STACK Init failed: " & Result'Img);
 
       Ctrl.Start;
@@ -91,7 +90,7 @@ package body USB_Testing.UDC_Scenarios is
 
          Actual : constant AAA.Strings.Vector := Output.Dump;
       begin
-         AUnit.Assertions.Assert
+         pragma Assert
            (Equal (Expected, Actual),
             "Diff in output: " & ASCII.LF &
               Diff (Expected, Actual, "Expected", "Actual").Flatten (ASCII.LF));
@@ -129,11 +128,11 @@ package body USB_Testing.UDC_Scenarios is
       Result : USB.Device.Init_Result;
    begin
 
-      AUnit.Assertions.Assert
+      pragma Assert
         (Ctrl.Register_Class (Class1'Unchecked_Access),
          "USB STACK register class1 failed");
 
-      AUnit.Assertions.Assert
+      pragma Assert
         (Ctrl.Register_Class (Class2'Unchecked_Access),
          "USB STACK register class2 failed");
 
@@ -144,7 +143,7 @@ package body USB_Testing.UDC_Scenarios is
          Serial_Number   => To_USB_String ("Serial"),
          Max_Packet_Size => 64);
 
-      AUnit.Assertions.Assert
+      pragma Assert
         (Result = Ok, "USB STACK Init failed: " & Result'Img);
 
       Ctrl.Start;
@@ -161,7 +160,7 @@ package body USB_Testing.UDC_Scenarios is
 
          Actual : constant AAA.Strings.Vector := Output.Dump;
       begin
-         AUnit.Assertions.Assert
+         pragma Assert
            (Equal (Expected, Actual),
             "Diff in output: " & ASCII.LF &
               Diff (Expected, Actual, "Expected", "Actual").Flatten (ASCII.LF));
