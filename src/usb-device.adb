@@ -380,7 +380,12 @@ package body USB.Device is
          This.Initializing := Class.Ptr;
 
          --  Initialize the class
-         Result := Class.Ptr.Initialize (This, Iface_Id);
+         declare
+            --  Workaround gnatprove warning on Class.Ptr
+            Class_Ptr : constant Any_USB_Device_Class := Class.Ptr;
+         begin
+            Result := Class_Ptr.Initialize (This, Iface_Id);
+         end;
 
          if Result /= Ok then
             return Result;
