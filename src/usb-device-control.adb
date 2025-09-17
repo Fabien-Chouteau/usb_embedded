@@ -33,8 +33,6 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 with System.Storage_Elements; use System.Storage_Elements;
 
-with USB.Utils;
-
 package body USB.Device.Control is
 
    function Need_ZLP (Len     : Buffer_Len;
@@ -221,7 +219,7 @@ package body USB.Device.Control is
       This.Ctrl.Len := 0;
       This.Ctrl.Buf := This.Ctrl.Buffer'Address;
 
-      --  The UDC will write data to EP_Out_Addr. Upon transfer complete, we
+      --  The UDC will write data to its own buffer. Upon transfer complete, we
       --  will copy to internal control buffer.
 
       if Req.Length > UInt16 (This.Max_Packet_Size) then
@@ -453,9 +451,9 @@ package body USB.Device.Control is
    begin
       if This.Ctrl.Len > Buffer_Len (This.Max_Packet_Size) then
 
-         USB.Utils.Copy (Src   => This.Ctrl.Buf,
-                         Dst   => This.Ctrl.EP_In_Addr,
-                         Count => This.Max_Packet_Size);
+         This.UDC.Write_To_EP (Ep  => 0,
+                              Src => This.Ctrl.Buf,
+                              Len => This.Max_Packet_Size);
 
          This.UDC.EP_Send_Packet (0, This.Max_Packet_Size);
 
@@ -468,9 +466,9 @@ package body USB.Device.Control is
 
       else
          --  Copy data to the UDC EP buffer
-         USB.Utils.Copy (Src   => This.Ctrl.Buf,
-                         Dst   => This.Ctrl.EP_In_Addr,
-                         Count => Packet_Size (This.Ctrl.Len));
+         This.UDC.Write_To_EP (Ep  => 0,
+                              Src => This.Ctrl.Buf,
+                              Len => Packet_Size (This.Ctrl.Len));
 
          This.UDC.EP_Send_Packet (0, Packet_Size (This.Ctrl.Len));
 
@@ -496,9 +494,9 @@ package body USB.Device.Control is
                         Buffer_Len (This.Ctrl.Req.Length) - This.Ctrl.Len);
    begin
       --  Copy data from the UDC EP buffer
-      USB.Utils.Copy (Src   => This.Ctrl.EP_Out_Addr,
-                      Dst   => This.Ctrl.Buf,
-                      Count => Packet_Size (Read_Size));
+      This.UDC.Read_From_EP (Ep  => 0,
+                             Dst => This.Ctrl.Buf,
+                             Len => Packet_Size (Read_Size));
 
       This.Ctrl.Len := This.Ctrl.Len + Read_Size;
       This.Ctrl.Buf := This.Ctrl.Buf + Read_Size;

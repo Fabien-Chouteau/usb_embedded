@@ -69,12 +69,24 @@ package USB.HAL.Device is
    function Request_Buffer (This          : in out USB_Device_Controller;
                             Ep            :        EP_Addr;
                             Len           :        Packet_Size)
-                            return System.Address
+                            return Boolean
    is abstract;
    --  Allocate a buffer for the given End-Point, either from RAM or internal
    --  USB Controller memory depending on the controller. UDC must keep track
    --  of the return address to perform IN/OUT transfers (see EP_Send_Packet
    --  and EP_Ready_For_Data).
+
+   procedure Write_To_EP (This : in out USB_Device_Controller;
+                         Ep   : EP_Id;
+                         Src  : System.Address;
+                         Len  : Packet_Size)
+   is abstract;
+
+   procedure Read_From_EP (This : in out USB_Device_Controller;
+                           Ep   : EP_Id;
+                           Dst  : System.Address;
+                           Len  : Packet_Size)
+   is abstract;
 
    function Valid_EP_Id (This : in out USB_Device_Controller;
                          EP   :        EP_Id)

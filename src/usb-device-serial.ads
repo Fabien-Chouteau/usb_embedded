@@ -99,10 +99,6 @@ private
       Bulk_EP         : USB.EP_Id;
       Iface_Str       : USB.String_Id := Invalid_String_Id;
 
-      Int_Buf         : System.Address := System.Null_Address;
-      Bulk_Out_Buf    : System.Address := System.Null_Address;
-      Bulk_In_Buf     : System.Address := System.Null_Address;
-
       TX_Queue : BBqueue.Buffers.Buffer (TX_Buffer_Size);
       RX_Queue : BBqueue.Buffers.Buffer (RX_Buffer_Size);
 

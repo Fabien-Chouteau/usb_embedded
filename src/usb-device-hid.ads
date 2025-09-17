@@ -68,7 +68,6 @@ private
       Interface_Index : Interface_Id;
       EP              : USB.EP_Id;
       Report          : Report_Data (1 .. Report_Size);
-      Report_Buf      : System.Address := System.Null_Address;
       State           : Class_State := Stop;
       Idle_State      : UInt8 := 0;
    end record;
