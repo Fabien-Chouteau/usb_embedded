@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v2
 
         # Install and setup Alire package manager
-      - uses: alire-project/setup-alire@v1
+      - uses: alire-project/setup-alire@v5
 
         # Build the project using the validation build profile to enforce static analysis and coding style.
       - run: alr build --validation
@@ -31,10 +31,10 @@ jobs:
 
         # Produce an Alire release manifest
       - name: Make Release Manifest
-        if: (github.event_name == 'release' || github.event_name == 'push')
+        if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
         run: |
           # Set user GitHub login required for `alr publish`
-          alr config --set --global user.github_login ${{github.repository_owner}}
+          alr settings --set --global user.github_login ${{github.repository_owner}}
 
           # Run Alire publish assistant
           alr publish ${{github.server_url}}/${{github.repository}} ${{github.sha}}
@@ -42,7 +42,7 @@ jobs:
         # Save the path to the release manifest for the next step.
         # This is a little trick to get around the fact that the actions/upload-release-asset doesn't allow globing pattern.
       - name: Get Release Manifest PATH
-        if: (github.event_name == 'release' || github.event_name == 'push')
+        if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
         shell: bash
         run: |
           export MANIFEST_PATHNAME=$(ls alire/releases/*.toml | head -n 1)
