@@ -481,7 +481,11 @@ package body USB.Device.MIDI is
                                  Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer
-   is (Not_Supported);
+   is
+   begin
+      pragma Unreferenced (This);
+      return Not_Supported;
+   end Setup_Write_Request;
 
    -----------------------
    -- Transfer_Complete --
