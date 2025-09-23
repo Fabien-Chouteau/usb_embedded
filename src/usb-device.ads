@@ -63,13 +63,13 @@ package USB.Device is
    function Request_Buffer (This : in out USB_Device_Stack;
                             EP   :        EP_Addr;
                             Len  :        Packet_Size)
-                            return System.Address
+                            return Boolean
      with Pre => not This.Initialized;
-   --  Allocate a buffer for the corresponding End-Point. This buffer should
+   --  Allocate a buffer for the corresponding End-Point. This buffer can
    --  then be used by the class for IN or OUT transfers depending on the given
-   --  EP address.
+   --  EP address by using Move_To_EP and Move_From_EP.
    --
-   --  Return Null_Address if resquest fails (e.g. no memory available).
+   --  Return False if resquest fails (e.g. no memory available).
 
    function Register_String (This : in out USB_Device_Stack;
                              Str  : USB_String)
@@ -96,9 +96,14 @@ package USB.Device is
       Bcd_Device      : UInt16 := 16#0121#)
       return Init_Result
      with Post => (if Initialize'Result = Ok then This.Initialized);
+   --  Allocate buffers for control End-Point and initialize the registered
+   --  classes.
+   --  Return Not_Enough_EPs or Not_Enough_EP_Buffer if the initialization
+   --  fails.
 
    procedure Start (This : in out USB_Device_Stack)
      with Pre => This.Initialized;
+   --  Initialize and start the USB device controller
 
    procedure Reset (This : in out USB_Device_Stack)
      with Pre => This.Initialized;
@@ -180,10 +185,6 @@ private
       --  be copied to/from EP_In/Out_Addr buffer allocated from the UDC.
       --  Sometimes the class will provide its own data buffer for transfer
       --  in which case this Buffer is not used.
-
-      EP_Out_Addr : System.Address := System.Null_Address;
-      EP_In_Addr  : System.Address := System.Null_Address;
-      --  Endpoint buffer addresses allocated from the UDC
 
       Req : Setup_Data;
 

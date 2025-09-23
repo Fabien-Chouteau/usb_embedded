@@ -275,13 +275,13 @@ package body USB.Device is
    function Request_Buffer (This : in out USB_Device_Stack;
                             EP   :        EP_Addr;
                             Len  :        Packet_Size)
-                            return System.Address
+                            return Boolean
    is
    begin
       if This.UDC /= null then
          return This.UDC.Request_Buffer (EP, Len);
       else
-         return System.Null_Address;
+         return False;
       end if;
    end Request_Buffer;
 
@@ -337,8 +337,6 @@ package body USB.Device is
       Bcd_Device      : UInt16 := 16#0121#)
       return Init_Result
    is
-      use System;
-
       Number_Of_Interfaces : Interface_Id;
       Unused : Natural;
       Iface_Id : Interface_Id := 0;
@@ -351,19 +349,15 @@ package body USB.Device is
 
       --  Control EP buffers
 
-      This.Ctrl.EP_In_Addr := This.UDC.Request_Buffer
-        (Ep  => (0, EP_In),
-         Len => This.Max_Packet_Size);
-
-      if This.Ctrl.EP_In_Addr = System.Null_Address then
+      if not This.UDC.Request_Buffer
+               (Ep => (0, EP_In), Len => This.Max_Packet_Size)
+      then
          return Not_Enough_EP_Buffer;
       end if;
 
-      This.Ctrl.EP_Out_Addr := This.UDC.Request_Buffer
-        (Ep  => (0, EP_Out),
-         Len => This.Max_Packet_Size);
-
-      if This.Ctrl.EP_Out_Addr = System.Null_Address then
+      if not This.UDC.Request_Buffer
+               (Ep => (0, EP_Out), Len => This.Max_Packet_Size)
+      then
          return Not_Enough_EP_Buffer;
       end if;
 

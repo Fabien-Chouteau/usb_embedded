@@ -196,7 +196,7 @@ package body USB_Testing.UDC_Stub is
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
                             Len           :        Packet_Size)
-                            return System.Address
+                            return Boolean
    is
    begin
       This.Put_Line ("UDC Request_Buffer (" & Img (Ep) &
@@ -213,8 +213,40 @@ package body USB_Testing.UDC_Stub is
          This.EPs (Ep.Num) (Ep.Dir).Max_Size := 0;
       end if;
 
-      return This.EPs (Ep.Num) (Ep.Dir).EP_Buf;
+      return This.EPs (Ep.Num) (Ep.Dir).EP_Buf /= System.Null_Address;
    end Request_Buffer;
+
+   -----------------
+   -- Move_To_EP ---
+   -----------------
+
+   overriding
+   procedure Write_To_EP (This : in out Controller;
+                         Ep   : EP_Id;
+                         Src  : System.Address;
+                         Len  : Packet_Size)
+   is
+   begin
+      This.Put_Line ("UDC Move_To_EP " & Img (EP_Addr'(Ep, EP_In)) &
+                    Len'Img & " bytes");
+      USB.Utils.Copy (Src => Src, Dst => This.EPs (Ep) (EP_In).EP_Buf, Count => Len);
+   end Write_To_EP;
+
+   -------------------
+   -- Move_From_EP ---
+   -------------------
+
+   overriding
+   procedure Read_From_EP (This : in out Controller;
+                           Ep   : EP_Id;
+                           Dst  : System.Address;
+                           Len  : Packet_Size)
+   is
+   begin
+      This.Put_Line ("UDC Move_From_EP " & Img (EP_Addr'(Ep, EP_Out)) &
+                    Len'Img & " bytes");
+      USB.Utils.Copy (Src => This.EPs (Ep) (EP_Out).EP_Buf, Dst => Dst, Count => Len);
+   end Read_From_EP;
 
    -----------
    -- Start --

@@ -164,9 +164,9 @@ package body USB.Device.MIDI is
       if State (RG) = Valid then
 
          --  Copy into IN buffer
-         USB.Utils.Copy (Src   => Slice (RG).Addr,
-                         Dst   => This.EP_In_Buf,
-                         Count => Natural (Slice (RG).Length));
+         UDC.Write_To_EP (Ep  => This.EP,
+                         Src => Slice (RG).Addr,
+                         Len => Packet_Size (Slice (RG).Length));
 
          USB.Logging.Device.Log_MIDI_Write_Packet;
 
@@ -198,15 +198,11 @@ package body USB.Device.MIDI is
          return Not_Enough_EPs;
       end if;
 
-      This.EP_Out_Buf := Dev.Request_Buffer ((This.EP, EP_Out),
-                                             EP_Buffer_Size);
-      if This.EP_Out_Buf = System.Null_Address then
+      if not Dev.Request_Buffer ((This.EP, EP_Out), EP_Buffer_Size) then
          return Not_Enough_EP_Buffer;
       end if;
 
-      This.EP_In_Buf := Dev.Request_Buffer ((This.EP, EP_In),
-                                            EP_Buffer_Size);
-      if This.EP_In_Buf = System.Null_Address then
+      if not Dev.Request_Buffer ((This.EP, EP_In), EP_Buffer_Size) then
          return Not_Enough_EP_Buffer;
       end if;
 
@@ -481,7 +477,11 @@ package body USB.Device.MIDI is
                                  Req   : Setup_Data;
                                  Data  : UInt8_Array)
                                  return Setup_Request_Answer
-   is (Not_Supported);
+   is
+   begin
+      pragma Unreferenced (This);
+      return Not_Supported;
+   end Setup_Write_Request;
 
    -----------------------
    -- Transfer_Complete --
@@ -506,9 +506,9 @@ package body USB.Device.MIDI is
 
             if State (WG) = Valid then
 
-               USB.Utils.Copy (Src   => This.EP_Out_Buf,
-                               Dst   => Slice (WG).Addr,
-                               Count => CNT);
+               UDC.Read_From_EP (Ep  => This.EP,
+                                 Dst => Slice (WG).Addr,
+                                 Len => CNT);
 
                Commit (This.RX_Queue, WG, BBqueue.Count (CNT));
             else

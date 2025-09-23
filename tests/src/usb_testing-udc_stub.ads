@@ -87,7 +87,19 @@ package USB_Testing.UDC_Stub is
    function Request_Buffer (This          : in out Controller;
                             Ep            :        EP_Addr;
                             Len           :        Packet_Size)
-                            return System.Address;
+                            return Boolean;
+
+   overriding
+   procedure Write_To_EP (This : in out Controller;
+                         Ep   : EP_Id;
+                         Src  : System.Address;
+                         Len  : Packet_Size);
+
+   overriding
+   procedure Read_From_EP (This : in out Controller;
+                           Ep   : EP_Id;
+                           Dst  : System.Address;
+                           Len  : Packet_Size);
 
    overriding
    function Valid_EP_Id (This : in out Controller;

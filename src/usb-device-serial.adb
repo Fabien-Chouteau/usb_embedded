@@ -70,9 +70,7 @@ package body USB.Device.Serial is
          return Not_Enough_EPs;
       end if;
 
-      This.Int_Buf := Dev.Request_Buffer ((This.Int_EP, EP_In),
-                                          Irq_Buffer_Size);
-      if This.Int_Buf = System.Null_Address then
+      if not Dev.Request_Buffer ((This.Int_EP, EP_In), Irq_Buffer_Size) then
          return Not_Enough_EP_Buffer;
       end if;
 
@@ -82,15 +80,11 @@ package body USB.Device.Serial is
          return Not_Enough_EPs;
       end if;
 
-      This.Bulk_Out_Buf := Dev.Request_Buffer ((This.Bulk_EP, EP_Out),
-                                               Bulk_Buffer_Size);
-      if This.Bulk_Out_Buf = System.Null_Address then
+      if not Dev.Request_Buffer ((This.Bulk_EP, EP_Out), Bulk_Buffer_Size) then
          return Not_Enough_EP_Buffer;
       end if;
 
-      This.Bulk_In_Buf := Dev.Request_Buffer ((This.Bulk_EP, EP_In),
-                                              Bulk_Buffer_Size);
-      if This.Bulk_In_Buf = System.Null_Address then
+      if not Dev.Request_Buffer ((This.Bulk_EP, EP_In), Bulk_Buffer_Size) then
          return Not_Enough_EP_Buffer;
       end if;
 
@@ -352,9 +346,9 @@ package body USB.Device.Serial is
 
             if State (WG) = Valid then
 
-               USB.Utils.Copy (Src   => This.Bulk_Out_Buf,
-                               Dst   => Slice (WG).Addr,
-                               Count => CNT);
+               UDC.Read_From_EP (Ep  => This.Bulk_EP,
+                                 Dst => Slice (WG).Addr,
+                                 Len => CNT);
 
                Commit (This.RX_Queue, WG, BBqueue.Count (CNT));
             end if;
@@ -412,9 +406,9 @@ package body USB.Device.Serial is
       if State (RG) = Valid then
 
          --  Copy into IN buffer
-         USB.Utils.Copy (Src   => Slice (RG).Addr,
-                         Dst   => This.Bulk_In_Buf,
-                         Count => Natural (Slice (RG).Length));
+         UDC.Write_To_EP (Ep  => This.Bulk_EP,
+                         Src => Slice (RG).Addr,
+                         Len => Packet_Size (Slice (RG).Length));
 
          USB.Logging.Device.Log_Serial_Write_Packet;
 
