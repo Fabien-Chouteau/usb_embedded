@@ -37,10 +37,10 @@ package body USB.Logging.Device is
 
    Event_Buffer : array (Event_Index) of Log_Event :=
      (others => (Kind  => None, ID => 0));
-   pragma Unreferenced (Event_Buffer);
 
-   Index : Event_Index := Event_Index'First;
-   ID    : Log_Event_ID;
+   Write_Index : Event_Index := Event_Index'First;
+   Read_Index  : Event_Index := Event_Index'First;
+   ID          : Log_Event_ID;
 
    procedure Log (Evt : Log_Event);
 
@@ -50,8 +50,8 @@ package body USB.Logging.Device is
 
    procedure Log (Evt : Log_Event) is
    begin
-      Event_Buffer (Index) := Evt;
-      Index := Index + 1;
+      Event_Buffer (Write_Index) := Evt;
+      Write_Index := Write_Index + 1;
    end Log;
 
    ---------
@@ -310,4 +310,19 @@ package body USB.Logging.Device is
       Log (Log_Event'(Kind      => MIDI_Write_Packet,
                       ID        => ID));
    end Log_MIDI_Write_Packet;
+
+   function Get_Log_Event_Image return String is
+   begin
+      if Write_Index = Read_Index then
+         return "";
+      else
+         declare
+            Log_Text : String := Img (Event_Buffer (Read_Index));
+         begin
+            Read_Index := Read_Index + 1;
+            return Log_Text;
+         end;
+      end if;
+   end Get_Log_Event_Image;
+
 end USB.Logging.Device;
