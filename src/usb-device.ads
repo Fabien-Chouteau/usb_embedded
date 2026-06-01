@@ -155,6 +155,24 @@ package USB.Device is
                                 CNT  :        Packet_Size)
    is abstract;
 
+   -------------
+   -- Logging --
+   -------------
+
+   type Put_Line_Procedure is access procedure (Str : String);
+   --  Access to a logging procedure with the same signature as
+   --  @code{Ada.Text_IO.Put_Line}
+
+   procedure Set_Custom_Put_Line (Put_Line : Put_Line_Procedure);
+   --   Install a custom logging procedure
+   --
+   --  @param Put_Line  The new logging procedure to use. Pass @code{null}
+   --                   to restore the original behaviour.
+   --
+   --  This can be called at any time, even after the USB stack has been
+   --  initialised and started. The change takes effect immediately for all
+   --  subsequent debug messages.
+
 private
 
    type Control_State is (Idle,
