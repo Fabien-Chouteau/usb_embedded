@@ -50,10 +50,12 @@ package body USB.Device is
    procedure Put_Line (Str : String);
    procedure Put_Line (Str : String) is
    begin
-      if Custom_Put_Line /= null then
-         Custom_Put_Line.all (Str);
-      elsif Verbose then
-         Ada.Text_IO.Put_Line (Str);
+      if Verbose then
+         if Custom_Put_Line /= null then
+            Custom_Put_Line.all (Str);
+         else
+            Ada.Text_IO.Put_Line (Str);
+         end if;
       end if;
    end Put_Line;
 
