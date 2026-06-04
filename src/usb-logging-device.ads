@@ -110,9 +110,10 @@ private
    function Img (Log : Log_Event) return String
    is ("ID: " & Log.ID'Image &
        " Kind: " & Log.Kind'Image &
-       (if Log.Kind = UDC_Evt
-       then " UDC_Event: (" & USB.HAL.Device.Img (Log.UDC_Event) & ")"
-       else ""))
+       (case Log.Kind is
+       when UDC_Evt =>
+          " UDC_Event: (" & USB.HAL.Device.Img (Log.UDC_Event) & ")",
+       when others  => ""))
        with Pure_Function;
 
 end USB.Logging.Device;
