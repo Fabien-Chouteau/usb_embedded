@@ -35,7 +35,6 @@ with HAL; use HAL;
 with Usb_Embedded_Config;
 
 private with System;
-private with Usb_Embedded_Config;
 
 package USB is
 
