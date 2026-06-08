@@ -40,11 +40,22 @@ with USB.Utils;
 
 package body USB.Device is
 
+   Custom_Put_Line : Put_Line_Procedure := null;
+
+   procedure Set_Custom_Put_Line (Put_Line : Put_Line_Procedure) is
+   begin
+      Custom_Put_Line := Put_Line;
+   end Set_Custom_Put_Line;
+
    procedure Put_Line (Str : String);
    procedure Put_Line (Str : String) is
    begin
       if Verbose then
-         Ada.Text_IO.Put_Line (Str);
+         if Custom_Put_Line /= null then
+            Custom_Put_Line.all (Str);
+         else
+            Ada.Text_IO.Put_Line (Str);
+         end if;
       end if;
    end Put_Line;
 
