@@ -35,6 +35,7 @@ with HAL; use HAL;
 with Usb_Embedded_Config;
 
 private with System;
+private with Usb_Embedded_Config;
 
 package USB is
 
@@ -190,7 +191,7 @@ package USB is
 
    subtype Buffer_Len is System.Storage_Elements.Storage_Offset;
 
-   Verbose : constant Boolean := False;
+   Verbose : constant Boolean := Usb_Embedded_Config.Log_Verbose;
 
    Control_Buffer_Size : constant := Usb_Embedded_Config.Control_Buffer_Size;
    Max_Strings : constant := Usb_Embedded_Config.Max_Strings;
