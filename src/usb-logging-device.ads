@@ -33,6 +33,8 @@ with USB.HAL.Device;
 
 package USB.Logging.Device is
 
+   type Log_Event is private;
+
    procedure Log (Evt : USB.HAL.Device.UDC_Event);
 
    procedure Log_Serial_Init;
@@ -58,6 +60,8 @@ package USB.Logging.Device is
    procedure Log_MIDI_RX_Discarded;
    procedure Log_MIDI_TX_Discarded;
    procedure Log_MIDI_Write_Packet;
+
+   function Get_Log_Event_Image return String;
 
 private
 
@@ -102,5 +106,14 @@ private
             null;
       end case;
    end record;
+
+   function Img (Log : Log_Event) return String
+   is ("ID: " & Log.ID'Image &
+       " Kind: " & Log.Kind'Image &
+       (case Log.Kind is
+       when UDC_Evt =>
+          " UDC_Event: (" & USB.HAL.Device.Img (Log.UDC_Event) & ")",
+       when others  => ""))
+       with Pure_Function;
 
 end USB.Logging.Device;

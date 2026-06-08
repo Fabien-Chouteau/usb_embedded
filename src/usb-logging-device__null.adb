@@ -55,4 +55,6 @@ package body USB.Logging.Device is
    procedure Log_MIDI_TX_Discarded is null;
    procedure Log_MIDI_Write_Packet is null;
 
+   function Get_Log_Event_Image return String is ("");
+
 end USB.Logging.Device;
