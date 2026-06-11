@@ -34,7 +34,20 @@ private with BBqueue.Buffers;
 private with Atomic;
 
 package USB.Device.Serial is
+   use type System.Storage_Elements.Storage_Offset;
 
+   --  @summary Default USB serial device class implementation
+   --  @description
+   --  This limited type provides a simple CDC-ACM (virtual serial port)
+   --  implementation on top of the USB device controller. It uses two BBqueue
+   --  ring buffers for transmit and receive data.
+   --
+   --  **Recommended buffer sizing**
+   --  * `TX_Buffer_Size`: at least 2 × USB packet size (128 bytes minimum for
+   --    full-speed USB).
+   --  * `RX_Buffer_Size`: at least as large as the largest single read
+   --    operation expected by the application.
+   --
    type Default_Serial_Class (TX_Buffer_Size, RX_Buffer_Size : BBqueue.Count)
    is limited new USB_Device_Class with private;
 
@@ -68,27 +81,92 @@ package USB.Device.Serial is
    -- Reading Data from the USB Host --
    ------------------------------------
 
+   --  @summary Read data received from the USB host
+   --  @description
+   --  Attempts to read up to `Len` bytes from the receive ring buffer into the
+   --  provided memory location. The actual number of bytes transferred is
+   --  returned in the `Len` parameter.
+   --
+   --  Longer messages than the available buffer space will not be transferred
+   --  in a single call. On return the caller must check the updated `Len` value
+   --  and retry if more data is required.
+   --
+   --  A short delay between retries is recommended to avoid saturating the
+   --  receive ring buffer. Because of possible fragmentation inside the ring
+   --  buffer a retry may be necessary even for relatively small requests.
+   --
+   --  @param This The serial device instance
+   --  @param Buf  Address of the buffer to receive the data
+   --  @param Len  On entry: maximum number of bytes to read.
+   --              On exit:  actual number of bytes transferred.
    procedure Read (This : in out Default_Serial_Class;
                    Buf  :        System.Address;
-                   Len  : in out UInt32);
+                   Len  : in out UInt32) with
+     Post => (Len <= Len'Old) and then Len <= UInt32 (This.Rx_Buffer_Size);
 
+   --  @summary Read data received from the USB host into a string
+   --  @description
+   --  Same semantics as the address-based `Read` procedure, but writes the data
+   --  directly into an Ada `String`. The string must be large enough to hold
+   --  the requested number of characters.
+   --
+   --  See the address-based `Read` for details on partial transfers and retry
+   --  behaviour.
+   --
+   --  @param This The serial device instance
+   --  @param Str  Output string that will receive the data
+   --  @param Len  On exit:  actual number of characters transferred.
    procedure Read (This : in out Default_Serial_Class;
                    Str  :    out String;
-                   Len  :    out UInt32);
+                   Len  :    out UInt32) with
+     Post => (Len <= Len'Old) and then Len <= UInt32 (This.Rx_Buffer_Size);
 
    ----------------------------------
    -- Writing Data to the USB Host --
    ----------------------------------
 
+   --  @summary Write data to the USB host
+   --  @description
+   --  Attempts to queue up to `Len` bytes for transmission to the USB host. The
+   --  actual number of bytes accepted by the driver is returned in the `Len`
+   --  parameter.
+   --
+   --  The driver will never accept more bytes than supplied, but may accept
+   --  fewer due to buffer space or USB endpoint constraints. Longer messages
+   --  must be sent in multiple calls.
+   --
+   --  The caller is responsible for retrying any remaining data after a short
+   --  delay. Sending data too quickly without delays can completely deadlock
+   --  the USB stack with no automatic recovery.
+   --
+   --  @param This The serial device instance
+   --  @param UDC  The underlying USB device controller
+   --  @param Buf  Address of the data to be transmitted
+   --  @param Len  On entry: number of bytes to send.
+   --              On exit:  actual number of bytes queued.
    procedure Write (This : in out Default_Serial_Class;
                     UDC  : in out USB_Device_Controller'Class;
                     Buf  :        System.Address;
-                    Len  : in out UInt32);
+                    Len  : in out UInt32) with
+     Post => (Len <= Len'Old) and then Len <= UInt32 (This.TX_Buffer_Size) / 2;
 
+   --  @summary Write data to the USB host from a string
+   --  @description
+   --  Same semantics as the address-based `Write` procedure, but
+   --  reads the data directly from an Ada `String`.
+   --
+   --  See the address-based `Write` for details on partial transfers,
+   --  retry behaviour.
+   --
+   --  @param This The serial device instance
+   --  @param UDC  The underlying USB device controller
+   --  @param Str  String containing the data to be transmitted
+   --  @param Len  On exit: actual number of characters queued.
    procedure Write (This : in out Default_Serial_Class;
                     UDC  : in out USB_Device_Controller'Class;
                     Str  :        String;
-                    Len  :    out UInt32);
+                    Len  :    out UInt32) with
+     Post => Len <= Str'Length and then Len <= UInt32 (This.TX_Buffer_Size) / 2;
 
 private
 

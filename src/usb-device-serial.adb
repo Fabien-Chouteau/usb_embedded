@@ -465,7 +465,7 @@ package body USB.Device.Serial is
                    Buf  :        System.Address;
                    Len  : in out UInt32)
    is
-      RG : BBqueue.Buffers.Read_Grant;
+      RG : BBqueue.Buffers.Read_Grant := Empty;
    begin
       Read (This.RX_Queue, RG, Count (Len));
 
@@ -505,8 +505,11 @@ package body USB.Device.Serial is
                     Buf  :        System.Address;
                     Len  : in out UInt32)
    is
-      WG : BBqueue.Buffers.Write_Grant;
+      WG : BBqueue.Buffers.Write_Grant := Empty;
    begin
+      -- Requesting more then the half the buffer size will will fragment the ring buffer.
+      Len := UInt32'Min (Len, UInt32 (This.TX_Buffer_Size) / 2);
+
       Grant (This.TX_Queue, WG, Count (Len));
 
       if State (WG) = Valid then
