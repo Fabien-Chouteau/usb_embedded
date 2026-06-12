@@ -88,8 +88,8 @@ package USB.Device.Serial is
    --  returned in the `Len` parameter.
    --
    --  Longer messages than the available buffer space will not be transferred
-   --  in a single call. On return the caller must check the updated `Len` value
-   --  and retry if more data is required.
+   --  in a single call. On return the caller must check the updated `Len`
+   --  value and retry if more data is required.
    --
    --  A short delay between retries is recommended to avoid saturating the
    --  receive ring buffer. Because of possible fragmentation inside the ring
@@ -102,13 +102,13 @@ package USB.Device.Serial is
    procedure Read (This : in out Default_Serial_Class;
                    Buf  :        System.Address;
                    Len  : in out UInt32) with
-     Post => (Len <= Len'Old) and then Len <= UInt32 (This.Rx_Buffer_Size);
+     Post => Len <= Len'Old and then Len <= UInt32 (This.RX_Buffer_Size);
 
    --  @summary Read data received from the USB host into a string
    --  @description
-   --  Same semantics as the address-based `Read` procedure, but writes the data
-   --  directly into an Ada `String`. The string must be large enough to hold
-   --  the requested number of characters.
+   --  Same semantics as the address-based `Read` procedure, but writes the
+   --  data directly into an Ada `String`. The string must be large enough to
+   --  hold the requested number of characters.
    --
    --  See the address-based `Read` for details on partial transfers and retry
    --  behaviour.
@@ -119,7 +119,7 @@ package USB.Device.Serial is
    procedure Read (This : in out Default_Serial_Class;
                    Str  :    out String;
                    Len  :    out UInt32) with
-     Post => (Len <= Len'Old) and then Len <= UInt32 (This.Rx_Buffer_Size);
+     Post => Len <= Str'Length and then Len <= UInt32 (This.RX_Buffer_Size);
 
    ----------------------------------
    -- Writing Data to the USB Host --
@@ -127,9 +127,9 @@ package USB.Device.Serial is
 
    --  @summary Write data to the USB host
    --  @description
-   --  Attempts to queue up to `Len` bytes for transmission to the USB host. The
-   --  actual number of bytes accepted by the driver is returned in the `Len`
-   --  parameter.
+   --  Attempts to queue up to `Len` bytes for transmission to the USB host.
+   --  The actual number of bytes accepted by the driver is returned in the
+   --  `Len` parameter.
    --
    --  The driver will never accept more bytes than supplied, but may accept
    --  fewer due to buffer space or USB endpoint constraints. Longer messages
@@ -148,7 +148,7 @@ package USB.Device.Serial is
                     UDC  : in out USB_Device_Controller'Class;
                     Buf  :        System.Address;
                     Len  : in out UInt32) with
-     Post => (Len <= Len'Old) and then Len <= UInt32 (This.TX_Buffer_Size) / 2;
+     Post => Len <= Len'Old and then Len <= UInt32 (This.TX_Buffer_Size) / 2;
 
    --  @summary Write data to the USB host from a string
    --  @description
@@ -166,7 +166,8 @@ package USB.Device.Serial is
                     UDC  : in out USB_Device_Controller'Class;
                     Str  :        String;
                     Len  :    out UInt32) with
-     Post => Len <= Str'Length and then Len <= UInt32 (This.TX_Buffer_Size) / 2;
+     Post => Len <= Str'Length and then
+             Len <= UInt32 (This.TX_Buffer_Size) / 2;
 
 private
 

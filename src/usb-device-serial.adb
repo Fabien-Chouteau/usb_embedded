@@ -507,7 +507,8 @@ package body USB.Device.Serial is
    is
       WG : BBqueue.Buffers.Write_Grant := Empty;
    begin
-      -- Requesting more then the half the buffer size will will fragment the ring buffer.
+      --  Requesting more then the half the buffer size will will fragment and
+      --  deadlock the ring buffer.
       Len := UInt32'Min (Len, UInt32 (This.TX_Buffer_Size) / 2);
 
       Grant (This.TX_Queue, WG, Count (Len));
