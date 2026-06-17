@@ -317,7 +317,7 @@ package body USB.Logging.Device is
          return "";
       else
          declare
-            Log_Text : String := Img (Event_Buffer (Read_Index));
+            Log_Text : constant String := Img (Event_Buffer (Read_Index));
          begin
             Read_Index := Read_Index + 1;
             return Log_Text;

@@ -13,3 +13,6 @@ usb_embedded = { path='..' }
 
 [build-profiles]
 usb_embedded = 'validation'
+
+[configuration.values]
+usb_embedded.Event_Log_Buffer_Size = 256

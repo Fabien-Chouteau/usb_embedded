@@ -41,15 +41,12 @@ package body Tests.Device.HID is
 
                       );
 
-      RX_Data : aliased constant UInt8_Array := (1 .. 16 => 42);
-
       HID_Class : aliased USB.Device.HID.Mouse.Instance;
 
       Output : aliased USB_Testing.Output.Text_Output;
 
       UDC : aliased UDC_Stub.Controller (Output'Unchecked_Access,
                                          Scenario'Unchecked_Access,
-                                         RX_Data'Unchecked_Access,
                                          Has_Early_Address => False,
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,

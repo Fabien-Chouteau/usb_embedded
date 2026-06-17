@@ -29,8 +29,6 @@ package body Tests.Device is
       Scenario : aliased constant UDC_Stub.Stub_Scenario :=
         UDC_Scenarios.Enumeration (Verbose => True);
 
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Request_Buffer ([EP_IN 0], Len => 64)")
         .Append ("UDC Request_Buffer ([EP_OUT 0], Len => 64)")
@@ -56,7 +54,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => False,
                                                 Init_Verbose  => True);
    end Device_Descriptor;
@@ -86,8 +83,6 @@ package body Tests.Device is
                                           Req_EP => 0))
                       );
 
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (DEVICE_TO_HOST,STAND,DEV) Req: 6 Val: 256 Index: 0 Len: 64")
@@ -101,7 +96,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => False);
    end No_Status_Out_ZLP;
 
@@ -114,8 +108,6 @@ package body Tests.Device is
         UDC_Scenarios.Enumeration (Verbose => False) &
         UDC_Scenarios.Set_Address (Verbose => True);
 
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 5 Val: 42 Index: 0 Len: 0")
@@ -128,7 +120,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => False);
    end Set_Address;
 
@@ -141,8 +132,6 @@ package body Tests.Device is
         UDC_Scenarios.Enumeration (Verbose => False) &
         UDC_Scenarios.Set_Address (Verbose => True);
 
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,DEV) Req: 5 Val: 42 Index: 0 Len: 0")
@@ -156,7 +145,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => True);
    end Set_Early_Address;
 
@@ -168,8 +156,6 @@ package body Tests.Device is
       Scenario : aliased constant UDC_Stub.Stub_Scenario :=
         UDC_Scenarios.Enumeration (Verbose => False) &
         UDC_Scenarios.Get_Status  (Verbose => True);
-
-      RX_Data : aliased constant UInt8_Array := (1 .. 2 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
@@ -184,7 +170,6 @@ package body Tests.Device is
 
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => True);
    end Get_Status;
 
@@ -204,23 +189,27 @@ package body Tests.Device is
                                       Req     => ((Dev, 0, Class, Host_To_Device),
                                                   42, 0, 0, 16),
                                       Req_EP  => 0)),
-                       3 => (Kind => UDC_Event_E,
+
+                       3 => (Kind => Transfer_Out,
+                             EP_Out   => 0,
+                             Data_Out => AAA.Strings.Empty_Vector
+                             .Append ("****************")
+                            ),
+                       4 => (Kind => UDC_Event_E,
                              Evt  =>  (Kind => Transfer_Complete,
                                        EP   => (0, EP_Out),
                                        BCNT => 16)
                             )
                       );
 
-      RX_Data : aliased constant UInt8_Array := (1 .. 16 => 42);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,CLASS,DEV) Req: 42 Val: 0 Index: 0 Len: 16")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] FALSE")
         .Append ("UDC EP_Ready_For_Data [EP_OUT 0] TRUE")
-        .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_OUT 0] BCNT: 16")
         .Append ("UDC OUT Transfer [EP_OUT 0] 16 bytes")
         .Append ("0000_0000_0000_0000: 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A ****************")
+        .Append ("UDC Poll -> TRANSFER_COMPLETE [EP_OUT 0] BCNT: 16")
         .Append ("USB Class 1 Setup_Request Type: (HOST_TO_DEVICE,CLASS,DEV) Req: 42 Val: 0 Index: 0 Len: 16")
         .Append ("0000_0000_0000_0000: 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A 2A ****************")
         .Append ("UDC EP_Stall [EP_IN 0] TRUE")
@@ -230,7 +219,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => True);
    end Control_Data_Out;
 
@@ -244,8 +232,6 @@ package body Tests.Device is
         UDC_Scenarios.Enumeration (Verbose => False) &
         UDC_Scenarios.Set_Address (Verbose => False, Addr => 42) &
         UDC_Scenarios.Get_Config (Verbose => True);
-
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
@@ -263,7 +249,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => True);
    end Get_Device_Config;
 
@@ -285,8 +270,6 @@ package body Tests.Device is
         & UDC_Scenarios.Get_String (Verbose => True, Id => 3,  Ack => True)
         --  Get invalid string
         & UDC_Scenarios.Get_String (Verbose => True, Id => 42, Ack => False);
-
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
 
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
@@ -320,7 +303,6 @@ package body Tests.Device is
    begin
       USB_Testing.UDC_Scenarios.Basic_UDC_Test (Scenario,
                                                 Expected,
-                                                RX_Data,
                                                 Early_Address => True);
    end String_Descriptor;
 
@@ -361,8 +343,6 @@ package body Tests.Device is
                                           Req_EP => 0))
                       );
 
-      RX_Data : aliased constant UInt8_Array := (0 .. 1 => 0);
-
       Expected : constant AAA.Strings.Vector := AAA.Strings.Empty_Vector
         .Append ("UDC Verbose on")
         .Append ("UDC Poll -> SETUP_REQUEST [EP_OUT 0] Type: (HOST_TO_DEVICE,STAND,IFACE) Req: 0 Val: 0 Index: 0 Len: 0")
@@ -382,8 +362,7 @@ package body Tests.Device is
         .Append ("UDC Poll -> NONE");
    begin
       USB_Testing.UDC_Scenarios.Two_Classes_UDC_Test (Scenario,
-                                                      Expected,
-                                                      RX_Data);
+                                                      Expected);
    end Iface_Setup_Dispatch;
 
 begin

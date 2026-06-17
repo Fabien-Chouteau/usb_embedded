@@ -35,6 +35,8 @@ with Ada.Containers.Doubly_Linked_Lists;
 
 with System;
 
+with AAA.Strings;
+
 with HAL; use HAL;
 with USB; use USB;
 with USB.HAL.Device; use USB.HAL.Device;
@@ -45,21 +47,26 @@ with USB_Testing.Output; use USB_Testing.Output;
 package USB_Testing.UDC_Stub is
 
    type Scenario_Event_Kind is (Set_Verbose,
+                                Enable_Device_Log,
                                 UDC_Event_E,
                                 Transfer_Out,
-                                Transfer_In);
+                                Sync_Point);
 
    type Scenario_Event (Kind : Scenario_Event_Kind := UDC_Event_E) is record
       case Kind is
          when Set_Verbose =>
             Verbose : Boolean;
+         when Enable_Device_Log =>
+            Dev_Log_Enabled : Boolean;
          when UDC_Event_E =>
             Evt     : UDC_Event;
-         when Transfer_Out =>
+         when Transfer_Out => -- Host to device
             EP_Out : EP_Id;
-            Count_Out  : Natural;
-         when Transfer_In =>
-            EP_In : EP_Id;
+            Data_Out : AAA.Strings.Vector;
+         when Sync_Point =>
+            --  Pause the scenario until the test signals that the given
+            --  synchronization point has been reached.
+            Sync_Id : Natural;
       end case;
    end record;
 
@@ -69,7 +76,6 @@ package USB_Testing.UDC_Stub is
    type Controller
      (Output            : not null Text_Output_Acc;
       Scenario          : not null access constant Stub_Scenario;
-      RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
       EP_Buffers_Size   : Natural;
@@ -79,6 +85,35 @@ package USB_Testing.UDC_Stub is
    with private;
 
    function End_Of_Scenario (This : Controller) return Boolean;
+
+   procedure Signal_Sync_Point (This : in out Controller; Id : Natural);
+
+   procedure Push (This : in out Controller;
+                   Evt  :        Scenario_Event);
+
+   procedure Put_Line (This : in out Controller;
+                       Str  : String);
+   --  Print on the console iff in verbose mode
+
+   procedure Put (This : in out Controller;
+                  Str  : String);
+   --  Print on the console iff in verbose mode
+
+   procedure Put_Line_Always (This : in out Controller;
+                       Str  : String);
+   --  Print on the console regardless of verbose mode
+
+   procedure Put_Always (This : in out Controller;
+                         Str  : String);
+   --  Print on the console regardless of verbose mode
+
+   procedure Hex_Dump (This : in out Controller;
+                       Data : HAL.UInt8_Array);
+   --  Print on the console iff in verbose mode
+
+   procedure Hex_Dump (This : in out Controller;
+                       Data : String);
+   --  Print on the console iff in verbose mode
 
    overriding
    procedure Initialize (This : in out Controller);
@@ -148,7 +183,6 @@ private
       Max_Size         : Packet_Size := 0;
 
       Transfer_Len     : Packet_Size := 0;
-      Scenario_Waiting_For_Data : Boolean := False;
    end record;
 
    type EP_Stub_Couple is array (EP_Dir) of EP_Stub;
@@ -162,7 +196,6 @@ private
    type Controller
      (Output            : not null Text_Output_Acc;
       Scenario          : not null access constant Stub_Scenario;
-      RX_Data           : not null access constant UInt8_Array;
       Has_Early_Address : Boolean;
       Max_Packet_Size   : UInt32;
       EP_Buffers_Size   : Natural;
@@ -175,32 +208,22 @@ private
       Stack : Event_Stack.List;
 
       Scenario_Index : Natural := Scenario.all'First;
-      RX_Index       : Natural := RX_Data.all'First;
 
-      Verbose        : Boolean := Init_Verbose;
+      Verbose         : Boolean := Init_Verbose;
+      Dev_Log_Enabled : Boolean := False;
 
       EPs            : EP_Stub_Array (0 .. 5); -- Arbitrary number of EP
 
       Got_Ack        : Boolean := False;
 
       Alloc          : USB.Utils.Basic_RAM_Allocator (EP_Buffers_Size);
+
+      Waiting_For_Sync : Boolean := False;
+      Expected_Sync_Id : Natural := 0;
+      Sync_Timeout     : Natural := 0;
    end record;
 
    function Pop (This : in out Controller) return Scenario_Event
      with Pre => not This.Stack.Is_Empty;
 
-   procedure Push (This : in out Controller;
-                   Evt  :        Scenario_Event);
-
-   procedure Put_Line (This : in out Controller;
-                       Str  : String);
-   --  Print on the console iff in verbose mode
-
-   procedure Put (This : in out Controller;
-                  Str  : String);
-   --  Print on the console iff in verbose mode
-
-   procedure Hex_Dump (This : in out Controller;
-                       Data : HAL.UInt8_Array);
-   --  Print on the console iff in verbose mode
 end USB_Testing.UDC_Stub;
