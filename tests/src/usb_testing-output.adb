@@ -140,6 +140,20 @@ package body USB_Testing.Output is
       end if;
    end Hex_Dump;
 
+   --------------
+   -- Hex_Dump --
+   --------------
+
+   procedure Hex_Dump (This : in out Text_Output;
+                       Data      : String;
+                       Base_Addr : HAL.UInt64 := 0)
+   is
+      UInt8_Data : UInt8_Array (1 .. Data'Length)
+        with Address => Data'Address;
+   begin
+      Hex_Dump (This, UInt8_Data, Base_Addr);
+   end Hex_Dump;
+
    ----------
    -- Dump --
    ----------

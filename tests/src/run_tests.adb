@@ -6,6 +6,7 @@ with GNAT.OS_Lib;
 
 with Tests;
 with Tests.Device.HID;
+with Tests.Device.Serial;
 with Tests.Utils;
 
 procedure Run_Tests is

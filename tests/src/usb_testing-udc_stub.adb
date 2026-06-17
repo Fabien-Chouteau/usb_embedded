@@ -29,6 +29,7 @@
 --                                                                          --
 ------------------------------------------------------------------------------
 
+with USB.Logging.Device;
 with System; use System;
 
 package body USB_Testing.UDC_Stub is
@@ -40,7 +41,7 @@ package body USB_Testing.UDC_Stub is
 
    procedure Do_Out_Transfer (This : in out Controller'Class;
                               Ep   : EP_Id;
-                              Len  : Packet_Size);
+                              Data : String);
    -----------------
    -- Check_Event --
    -----------------
@@ -104,15 +105,15 @@ package body USB_Testing.UDC_Stub is
 
    procedure Do_Out_Transfer (This : in out Controller'Class;
                               Ep   : EP_Id;
-                              Len  : Packet_Size)
+                              Data : String)
    is
    begin
-      if Len = 0 then
+      if Data'Length = 0 then
          return;
       end if;
 
       This.Put_Line ("UDC OUT Transfer " & Img (EP_Addr'(Ep, EP_Out)) &
-                     Len'Img & " bytes");
+                     Data'Length'Img & " bytes");
 
       if Ep not in This.EPs'Range then
          raise Program_Error with "UDC Error: invalid EP number in EP_Read_Packet";
@@ -130,8 +131,9 @@ package body USB_Testing.UDC_Stub is
          raise Program_Error with "UDC Error: EP stalled in EP_Read_Packet";
       end if;
 
-      if Len > This.EPs (Ep) (EP_Out).Transfer_Len then
-         raise Program_Error with "UDC Error: Trying to write " & Len'Img &
+      if Data'Length > This.EPs (Ep) (EP_Out).Transfer_Len then
+         raise Program_Error with "UDC Error: Trying to write " &
+           Data'Length'Img &
            " byte(s) to a" & This.EPs (Ep) (EP_Out).Transfer_Len'Img &
            " byte(s) OUT transfer";
       end if;
@@ -141,17 +143,10 @@ package body USB_Testing.UDC_Stub is
       end if;
 
       declare
-         Data : UInt8_Array (1 .. Natural (Len))
+         EP_Data : String (1 .. Natural (Data'Length))
            with Address => This.EPs (Ep) (EP_Out).EP_Buf;
       begin
-         for Elt of Data loop
-            if This.RX_Index in This.RX_Data'Range then
-               Elt := This.RX_Data (This.RX_Index);
-               This.RX_Index := This.RX_Index + 1;
-            else
-               raise Program_Error with "UDC Error: Not enough data in RX_Data";
-            end if;
-         end loop;
+         EP_Data := Data;
          This.Hex_Dump (Data);
       end;
    end Do_Out_Transfer;
@@ -162,7 +157,27 @@ package body USB_Testing.UDC_Stub is
 
    function End_Of_Scenario (This : Controller)
                              return Boolean
-   is (This.Stack.Is_Empty);
+   is (This.Stack.Is_Empty and then not This.Waiting_For_Sync);
+
+   -----------------------
+   -- Signal_Sync_Point --
+   -----------------------
+
+   procedure Signal_Sync_Point (This : in out Controller; Id : Natural) is
+   begin
+      if not This.Waiting_For_Sync then
+         This.Put_Line_Always ("Error: UDC stub scenario sync not expected");
+      elsif Id /= This.Expected_Sync_Id then
+         This.Put_Line_Always ("Error: UDC stub scenario sync mismatch " &
+                                 "got" & Id'Img & ", expected" &
+                                 This.Expected_Sync_Id'Img);
+      else
+         This.Put_Line ("Scenario sync point" & Id'Img);
+      end if;
+
+      This.Waiting_For_Sync := False;
+      This.Expected_Sync_Id := 0;
+   end Signal_Sync_Point;
 
    ----------------
    -- Initialize --
@@ -250,6 +265,32 @@ package body USB_Testing.UDC_Stub is
    begin
 
       loop
+         declare
+            Log : constant String := USB.Logging.Device.Get_Log_Event_Image;
+         begin
+            exit when Log'Length = 0;
+
+            if This.Dev_Log_Enabled then
+               This.Put_Line ("Device Log -> " & Log);
+            end if;
+         end;
+      end loop;
+
+      loop
+         if This.Waiting_For_Sync then
+
+            if This.Sync_Timeout = 0 then
+               raise Program_Error
+                 with "UDC scenario sync timeout at point " &
+                 This.Expected_Sync_Id'Img;
+            else
+               This.Sync_Timeout := This.Sync_Timeout - 1;
+            end if;
+
+            Ret := No_Event;
+            exit;
+         end if;
+
          if This.Stack.Is_Empty then
             Ret := No_Event;
             exit;
@@ -267,15 +308,24 @@ package body USB_Testing.UDC_Stub is
                                            "on" else "off"));
                end if;
 
-            when Transfer_Out =>
-               null;
+            when Enable_Device_Log =>
+               if Step.Dev_Log_Enabled /= This.Dev_Log_Enabled then
+                  This.Dev_Log_Enabled := not This.Dev_Log_Enabled;
+                  This.Output.Put_Line ("UDC Device logs "  & (if This.Dev_Log_Enabled then
+                                           "on" else "off"));
+               end if;
 
-            when Transfer_In =>
-               This.EPs (Step.EP_In) (EP_In).Scenario_Waiting_For_Data := True;
+            when Transfer_Out =>
+               Do_Out_Transfer (This, Step.EP_Out, Step.Data_Out.Flatten (""));
 
             when UDC_Event_E =>
                Ret := Step.Evt;
                exit;
+
+            when Sync_Point =>
+               This.Waiting_For_Sync := True;
+               This.Expected_Sync_Id := Step.Sync_Id;
+               This.Sync_Timeout := 1000;
             end case;
          end;
       end loop;
@@ -286,10 +336,6 @@ package body USB_Testing.UDC_Stub is
 
       if Ret.Kind = Reset then
          Reset (This);
-      end if;
-
-      if Ret.Kind = Transfer_Complete and then Ret.EP.Dir = EP_Out then
-         Do_Out_Transfer (This, Ret.EP.Num, Ret.BCNT);
       end if;
 
       return Ret;
@@ -463,12 +509,47 @@ package body USB_Testing.UDC_Stub is
       end if;
    end Put;
 
+   ---------------------
+   -- Put_Line_Always --
+   ---------------------
+
+   procedure Put_Line_Always (This : in out Controller;
+                              Str  : String)
+   is
+   begin
+      This.Output.Put_Line (Str);
+   end Put_Line_Always;
+
+   ----------------
+   -- Put_Always --
+   ----------------
+
+   procedure Put_Always (This : in out Controller;
+                         Str  : String)
+   is
+   begin
+      This.Output.Put (Str);
+   end Put_Always;
+
    --------------
    -- Hex_Dump --
    --------------
 
    procedure Hex_Dump (This : in out Controller;
                        Data : HAL.UInt8_Array)
+   is
+   begin
+      if This.Verbose then
+         This.Output.Hex_Dump (Data);
+      end if;
+   end Hex_Dump;
+
+   --------------
+   -- Hex_Dump --
+   --------------
+
+   procedure Hex_Dump (This : in out Controller;
+                       Data : String)
    is
    begin
       if This.Verbose then

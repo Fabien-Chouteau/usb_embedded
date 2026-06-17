@@ -52,6 +52,10 @@ package USB_Testing.Output is
                        Data      : HAL.UInt8_Array;
                        Base_Addr : HAL.UInt64 := 0);
 
+   procedure Hex_Dump (This : in out Text_Output;
+                       Data      : String;
+                       Base_Addr : HAL.UInt64 := 0);
+
    function Dump (This : Text_Output) return AAA.Strings.Vector;
 
    function Equal (Expected, Actual : AAA.Strings.Vector) return Boolean;

@@ -42,7 +42,6 @@ package body USB_Testing.UDC_Scenarios is
 
    procedure Basic_UDC_Test (Scenario      : aliased UDC_Stub.Stub_Scenario;
                              Expected      :         AAA.Strings.Vector;
-                             RX_Data       : aliased UInt8_Array;
                              Early_Address : Boolean := False;
                              Init_Verbose  : Boolean := False)
    is
@@ -53,7 +52,6 @@ package body USB_Testing.UDC_Scenarios is
 
       UDC : aliased UDC_Stub.Controller (Output'Unchecked_Access,
                                          Scenario'Unchecked_Access,
-                                         RX_Data'Unchecked_Access,
                                          Has_Early_Address => Early_Address,
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,
@@ -105,7 +103,6 @@ package body USB_Testing.UDC_Scenarios is
 
    procedure Two_Classes_UDC_Test (Scenario     : aliased UDC_Stub.Stub_Scenario;
                                    Expected     :         AAA.Strings.Vector;
-                                   RX_Data      : aliased UInt8_Array;
                                    Init_Verbose : Boolean := False)
    is
       Output : aliased USB_Testing.Output.Text_Output;
@@ -118,7 +115,6 @@ package body USB_Testing.UDC_Scenarios is
 
       UDC : aliased UDC_Stub.Controller (Output'Unchecked_Access,
                                          Scenario'Unchecked_Access,
-                                         RX_Data'Unchecked_Access,
                                          Has_Early_Address => False,
                                          Max_Packet_Size   => 64,
                                          EP_Buffers_Size   => 256,
